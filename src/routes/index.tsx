@@ -6,6 +6,8 @@ import bg2 from "../assets/aurora-bg-2.jpg";
 import bg3 from "../assets/aurora-bg-3.jpg";
 import bg4 from "../assets/aurora-bg-4.jpg";
 import bg5 from "../assets/aurora-bg-5.jpg";
+import moonAsset from "../assets/aurora-moon.jpg.asset.json";
+import chromeAsset from "../assets/aurora-chrome.jpg.asset.json";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -31,13 +33,17 @@ export const Route = createFileRoute("/")({
 
 type Mode = "image" | "video";
 type Aspect = "1:1" | "16:9" | "9:16";
+type BgTheme = "moon" | "chrome" | "collage";
 
 interface Creation {
   id: number;
   prompt: string;
   model: string;
   kind: Mode;
-  gradient: string;
+  aspect: Aspect;
+  status: "pending" | "done" | "error";
+  url?: string;
+  error?: string;
 }
 
 interface ChatMsg {
@@ -45,20 +51,17 @@ interface ChatMsg {
   text: string;
 }
 
-const GRADIENTS = [
-  "linear-gradient(135deg, #2a4a6a, #1a2a3a)",
-  "linear-gradient(135deg, #6a4a2a, #3a2a1a)",
-  "linear-gradient(135deg, #4a2a5a, #2a1a3a)",
-  "linear-gradient(135deg, #2a5a4a, #1a3a2a)",
-  "linear-gradient(135deg, #5a3a3a, #3a2020)",
-];
+const IMAGE_MODEL = "Seedream 4.0";
+const VIDEO_MODEL = "Seedance 1.0 Lite";
 
-const CHAT_REPLIES = [
-  "Great idea! Try adding more detail — lighting, mood, and colors help a lot. 🎨",
-  "Love it. For best results, describe the scene, the style, and the camera angle.",
-  "Nice prompt! Hit the send button above and I'll help you refine the result afterwards.",
-  "I can help with that — want a cinematic look or something bright and playful?",
-];
+const IMAGE_SIZES: Record<Aspect, Record<"2K" | "4K", string>> = {
+  "1:1": { "2K": "2048x2048", "4K": "4096x4096" },
+  "16:9": { "2K": "2560x1440", "4K": "3840x2160" },
+  "9:16": { "2K": "1440x2560", "4K": "2160x3840" },
+};
+
+const CHAT_SYSTEM =
+  "You are Aurora's Creative Director. Help the user shape vivid image and video prompts: suggest concrete creative directions, lighting, mood, composition, camera and style. Be warm and concise, and offer ready-to-paste prompts.";
 
 function ImageIcon() {
   return (
@@ -79,7 +82,6 @@ function VideoIcon() {
   );
 }
 
-
 function SendIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor">
@@ -91,9 +93,25 @@ function SendIcon() {
 function OpenAiMark() {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor">
-      <path d="M22.28 9.82a5.98 5.98 0 0 0-.52-4.91 6.05 6.05 0 0 0-6.51-2.9A6.07 6.07 0 0 0 4.98 4.18a5.98 5.98 0 0 0-4 2.9 6.05 6.05 0 0 0 .75 7.1 5.98 5.98 0 0 0 .51 4.91 6.05 6.05 0 0 0 6.52 2.9A5.98 5.98 0 0 0 13.26 24a6.06 6.06 0 0 0 5.77-4.21 5.99 5.99 0 0 0 4-2.9 6.06 6.06 0 0 0-.75-7.07zm-9.02 12.61a4.48 4.48 0 0 1-2.88-1.04l.14-.08 4.78-2.76a.78.78 0 0 0 .39-.68v-6.74l2.02 1.17a.07.07 0 0 1 .04.05v5.58a4.5 4.5 0 0 1-4.49 4.5zm-9.66-4.13a4.47 4.47 0 0 1-.54-3.01l.14.09 4.78 2.76a.77.77 0 0 0 .78 0l5.84-3.37v2.33a.08.08 0 0 1-.03.06L8.32 19.4a4.5 4.5 0 0 1-4.72-1.1zM2.34 7.9a4.49 4.49 0 0 1 2.37-1.97v5.68a.77.77 0 0 0 .39.68l5.83 3.37-2.02 1.16a.08.08 0 0 1-.07 0L3.6 14.57A4.5 4.5 0 0 1 2.34 7.9zm16.6 3.86l-5.83-3.37 2.02-1.16a.08.08 0 0 1 .07 0l5.24 3.24a4.49 4.49 0 0 1-.69 8.1v-5.68a.78.78 0 0 0-.39-.68h-.42zm2.18-3.29l-.14-.09-4.78-2.76a.77.77 0 0 0-.78 0L9.58 9v-2.3a.07.07 0 0 1 .03-.06l5.24-3.23a4.5 4.5 0 0 1 6.68 4.66zm-12.64 4.13L6.46 11.4a.08.08 0 0 1-.04-.06V5.76a4.5 4.5 0 0 1 7.38-3.45l-.14.08L8.88 5.15a.78.78 0 0 0-.39.68zm1.1-2.37l2.6-1.5 2.6 1.5v3l-2.6 1.5-2.6-1.5z" />
+      <path d="M12 2l2.4 6.2L21 10l-5.2 3.4L17 21l-5-3.4L7 21l1.2-7.6L3 10l6.6-1.8z" />
     </svg>
   );
+}
+
+async function callArk<T>(key: string, body: unknown): Promise<T> {
+  const res = await fetch("/api/ark", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-ark-key": key },
+    body: JSON.stringify(body),
+  });
+  const json = (await res.json().catch(() => ({}))) as {
+    error?: { message?: string };
+    message?: string;
+  };
+  if (!res.ok) {
+    throw new Error(json.error?.message || json.message || `Request failed (${res.status})`);
+  }
+  return json as T;
 }
 
 function Index() {
@@ -102,12 +120,15 @@ function Index() {
   const [aspect, setAspect] = useState<Aspect>("1:1");
   const [resolution, setResolution] = useState<"2K" | "4K">("2K");
   const [creations, setCreations] = useState<Creation[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [bg, setBg] = useState<BgTheme>("moon");
   const [chatOpen, setChatOpen] = useState(false);
   const [chatInput, setChatInput] = useState("");
+  const [chatBusy, setChatBusy] = useState(false);
   const [messages, setMessages] = useState<ChatMsg[]>([
     {
       role: "a",
-      text: "Welcome to Aurora Creative Studio! Describe what you want to create and I'll bring it to life. 🎬",
+      text: "Welcome to Aurora Creative Studio! Tell me what you're imagining and I'll turn it into a shootable prompt. 🎬",
     },
   ]);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -124,6 +145,10 @@ function Index() {
         setApiKey(s.apiKey ?? "");
         setSessionId(s.sessionId ?? "");
       }
+      const savedBg = localStorage.getItem("aurora_bg");
+      if (savedBg === "moon" || savedBg === "chrome" || savedBg === "collage") {
+        setBg(savedBg);
+      }
     } catch {
       // ignore
     }
@@ -131,44 +156,117 @@ function Index() {
 
   useEffect(() => {
     chatBodyRef.current?.scrollTo({ top: chatBodyRef.current.scrollHeight });
-  }, [messages, chatOpen]);
+  }, [messages, chatOpen, chatBusy]);
 
-  const model = mode === "image" ? "GPT Image 2 Low" : "GPT Video 1";
+  const model = mode === "image" ? IMAGE_MODEL : VIDEO_MODEL;
 
-  const handleGenerate = () => {
+  const chooseBg = (theme: BgTheme) => {
+    setBg(theme);
+    try {
+      localStorage.setItem("aurora_bg", theme);
+    } catch {
+      // ignore
+    }
+  };
+
+  const updateCreation = (id: number, patch: Partial<Creation>) => {
+    setCreations((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
+  };
+
+  const handleGenerate = async () => {
     const text = prompt.trim();
-    if (!text) return;
-    const hash = Array.from(text).reduce((a, c) => (a * 31 + c.charCodeAt(0)) | 0, 7);
-    const gradient = GRADIENTS[Math.abs(hash) % GRADIENTS.length] ?? GRADIENTS[0]!;
+    if (!text || busy) return;
+    const id = nextId.current++;
+    const currentMode = mode;
+    const currentAspect = aspect;
     setCreations((prev) => [
-      {
-        id: nextId.current++,
-        prompt: text,
-        model,
-        kind: mode,
-        gradient,
-      },
+      { id, prompt: text, model, kind: currentMode, aspect: currentAspect, status: "pending" },
       ...prev,
     ]);
     setPrompt("");
+    setBusy(true);
+
+    try {
+      if (!apiKey.trim()) {
+        throw new Error("Add your ARK API key in Settings to start generating.");
+      }
+      if (currentMode === "image") {
+        const data = await callArk<{ data?: { url?: string; b64_json?: string }[] }>(apiKey, {
+          kind: "image",
+          prompt: text,
+          size: IMAGE_SIZES[currentAspect][resolution],
+        });
+        const first = data.data?.[0];
+        const url = first?.url ?? (first?.b64_json ? `data:image/png;base64,${first.b64_json}` : undefined);
+        if (!url) throw new Error("No image was returned.");
+        updateCreation(id, { status: "done", url });
+      } else {
+        const task = await callArk<{ id?: string }>(apiKey, {
+          kind: "video",
+          prompt: text,
+          ratio: currentAspect,
+        });
+        if (!task.id) throw new Error("No video task was created.");
+        let url: string | undefined;
+        for (let i = 0; i < 120; i++) {
+          await new Promise((r) => setTimeout(r, 5000));
+          const status = await callArk<{
+            status?: string;
+            content?: { video_url?: string };
+            error?: { message?: string };
+          }>(apiKey, { kind: "videoStatus", taskId: task.id });
+          if (status.status === "succeeded") {
+            url = status.content?.video_url;
+            break;
+          }
+          if (status.status === "failed" || status.status === "cancelled") {
+            throw new Error(status.error?.message || "Video generation failed.");
+          }
+        }
+        if (!url) throw new Error("Video is taking too long — try again.");
+        updateCreation(id, { status: "done", url });
+      }
+    } catch (err) {
+      updateCreation(id, {
+        status: "error",
+        error: err instanceof Error ? err.message : "Something went wrong.",
+      });
+    } finally {
+      setBusy(false);
+    }
   };
 
-  const handleSendChat = () => {
+  const handleSendChat = async () => {
     const text = chatInput.trim();
-    if (!text) return;
-    setMessages((prev) => [...prev, { role: "u", text }]);
+    if (!text || chatBusy) return;
+    const history = [...messages, { role: "u" as const, text }];
+    setMessages(history);
     setChatInput("");
-    setTimeout(() => {
+    setChatBusy(true);
+    try {
+      if (!apiKey.trim()) {
+        throw new Error("Add your ARK API key in Settings so I can reply.");
+      }
+      const data = await callArk<{ choices?: { message?: { content?: string } }[] }>(apiKey, {
+        kind: "chat",
+        messages: [
+          { role: "system", content: CHAT_SYSTEM },
+          ...history.map((m) => ({
+            role: m.role === "u" ? "user" : "assistant",
+            content: m.text,
+          })),
+        ],
+      });
+      const reply = data.choices?.[0]?.message?.content?.trim();
+      setMessages((prev) => [...prev, { role: "a", text: reply || "I didn't catch that — try again?" }]);
+    } catch (err) {
       setMessages((prev) => [
         ...prev,
-        {
-          role: "a",
-          text:
-            CHAT_REPLIES[prev.filter((m) => m.role === "u").length % CHAT_REPLIES.length] ??
-            CHAT_REPLIES[0]!,
-        },
+        { role: "a", text: err instanceof Error ? err.message : "Something went wrong." },
       ]);
-    }, 600);
+    } finally {
+      setChatBusy(false);
+    }
   };
 
   const saveSettings = () => {
@@ -182,31 +280,51 @@ function Index() {
     [bg3, bg1],
   ];
 
+  const singleBg = bg === "moon" ? moonAsset.url : chromeAsset.url;
+
   return (
     <div className="aurora-body">
       <div className="aurora-bg-layer">
-        <div className="aurora-collage">
-          {collageCols.map((col, i) => (
-            <div className={`aurora-collage-col c${i + 1}`} key={i}>
-              {col.map((src, j) => (
-                <img
-                  key={j}
-                  src={src}
-                  alt=""
-                  width={768}
-                  height={1024}
-                  loading={i === 1 && j === 0 ? "eager" : "lazy"}
-                />
-              ))}
-            </div>
-          ))}
-        </div>
+        {bg === "collage" ? (
+          <div className="aurora-collage">
+            {collageCols.map((col, i) => (
+              <div className={`aurora-collage-col c${i + 1}`} key={i}>
+                {col.map((src, j) => (
+                  <img
+                    key={j}
+                    src={src}
+                    alt=""
+                    width={768}
+                    height={1024}
+                    loading={i === 1 && j === 0 ? "eager" : "lazy"}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="aurora-bg-single">
+            <img src={singleBg} alt="" />
+          </div>
+        )}
         <div className="aurora-bg-overlay" />
       </div>
 
       <div className="aurora-logo-top">
         <div className="aurora-logo-mark">A</div>
         Aurora
+        <div className="aurora-bg-switch" role="group" aria-label="Background">
+          {(["moon", "chrome", "collage"] as BgTheme[]).map((t) => (
+            <button
+              key={t}
+              className={`aurora-bg-btn ${bg === t ? "active" : ""}`}
+              onClick={() => chooseBg(t)}
+              aria-pressed={bg === t}
+            >
+              {t === "moon" ? "Moon" : t === "chrome" ? "Chrome" : "Collage"}
+            </button>
+          ))}
+        </div>
       </div>
 
       <button
@@ -224,9 +342,7 @@ function Index() {
             Seedance 2.5 is coming soon
           </div>
 
-          <h1 className="aurora-h1">
-            Create AI Images &amp; Videos in Seconds
-          </h1>
+          <h1 className="aurora-h1">Create AI Images &amp; Videos in Seconds</h1>
 
           <p className="aurora-subhead">
             30+ image tools, state-of-the-art video models, and growing. Turn any idea into
@@ -252,7 +368,9 @@ function Index() {
 
           <div className="aurora-prompt-card">
             <div className="aurora-prompt-top">
-              <button className="aurora-add-btn" aria-label="Add reference">+</button>
+              <button className="aurora-add-btn" aria-label="Add reference">
+                +
+              </button>
               <textarea
                 className="aurora-prompt-input"
                 placeholder={
@@ -265,7 +383,7 @@ function Index() {
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
-                    handleGenerate();
+                    void handleGenerate();
                   }
                 }}
               />
@@ -309,8 +427,8 @@ function Index() {
 
               <button
                 className="aurora-send-btn"
-                onClick={handleGenerate}
-                disabled={!prompt.trim()}
+                onClick={() => void handleGenerate()}
+                disabled={!prompt.trim() || busy}
                 aria-label="Generate"
               >
                 <SendIcon />
@@ -329,7 +447,7 @@ function Index() {
             </div>
             <div className="aurora-stat-item">
               <div className="aurora-stat-num">TOP 30</div>
-              <div className="aurora-stat-label">OpenAI Partner</div>
+              <div className="aurora-stat-label">AI Platform</div>
             </div>
           </div>
         </section>
@@ -346,14 +464,19 @@ function Index() {
             <div className="aurora-gallery-grid">
               {creations.map((c) => (
                 <div className="aurora-g-card" key={c.id}>
-                  <div className="aurora-g-thumb" style={{ background: c.gradient }}>
-                    {c.kind === "video" && (
-                      <span style={{ fontSize: 32, color: "rgba(255,255,255,0.7)" }}>▶</span>
+                  <div className="aurora-g-thumb">
+                    {c.status === "pending" && <span className="aurora-spinner" />}
+                    {c.status === "error" && <span className="aurora-g-error">{c.error}</span>}
+                    {c.status === "done" && c.url && c.kind === "image" && (
+                      <img src={c.url} alt={c.prompt} loading="lazy" />
+                    )}
+                    {c.status === "done" && c.url && c.kind === "video" && (
+                      <video src={c.url} controls playsInline preload="metadata" />
                     )}
                   </div>
                   <div className="aurora-g-info">
                     <div className="aurora-g-model">
-                      {c.kind === "video" ? "🎬" : "🖼"} {c.model} · {aspect}
+                      {c.kind === "video" ? "🎬" : "🖼"} {c.model} · {c.aspect}
                     </div>
                     <div className="aurora-g-prompt">{c.prompt}</div>
                   </div>
@@ -374,7 +497,11 @@ function Index() {
         <div className="aurora-chat-panel">
           <div className="aurora-chat-hd">
             <h3>🎬 Aurora Creative Director</h3>
-            <button className="aurora-chat-close" aria-label="Close chat" onClick={() => setChatOpen(false)}>
+            <button
+              className="aurora-chat-close"
+              aria-label="Close chat"
+              onClick={() => setChatOpen(false)}
+            >
               ×
             </button>
           </div>
@@ -384,15 +511,20 @@ function Index() {
                 {m.text}
               </div>
             ))}
+            {chatBusy && <div className="aurora-cm a aurora-typing">Thinking…</div>}
           </div>
           <div className="aurora-chat-input-row">
             <input
-              placeholder="Ask anything…"
+              placeholder="Ask for a creative direction…"
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSendChat()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void handleSendChat();
+              }}
             />
-            <button onClick={handleSendChat}>Send</button>
+            <button onClick={() => void handleSendChat()} disabled={chatBusy}>
+              Send
+            </button>
           </div>
         </div>
       )}
