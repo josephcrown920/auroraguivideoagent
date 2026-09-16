@@ -60,8 +60,6 @@ const IMAGE_SIZES: Record<Aspect, Record<"2K" | "4K", string>> = {
   "9:16": { "2K": "1440x2560", "4K": "2160x3840" },
 };
 
-const CHAT_SYSTEM =
-  "You are Aurora's Creative Director. Help the user shape vivid image and video prompts: suggest concrete creative directions, lighting, mood, composition, camera and style. Be warm and concise, and offer ready-to-paste prompts.";
 
 function ImageIcon() {
   return (
