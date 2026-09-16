@@ -122,7 +122,7 @@ function Index() {
     const text = prompt.trim();
     if (!text) return;
     const hash = Array.from(text).reduce((a, c) => (a * 31 + c.charCodeAt(0)) | 0, 7);
-    const gradient = GRADIENTS[Math.abs(hash) % GRADIENTS.length];
+    const gradient = GRADIENTS[Math.abs(hash) % GRADIENTS.length] ?? GRADIENTS[0]!;
     setCreations((prev) => [
       {
         id: nextId.current++,
@@ -144,7 +144,7 @@ function Index() {
     setTimeout(() => {
       setMessages((prev) => [
         ...prev,
-        { role: "a", text: CHAT_REPLIES[prev.filter((m) => m.role === "u").length % CHAT_REPLIES.length] },
+        { role: "a", text: CHAT_REPLIES[prev.filter((m) => m.role === "u").length % CHAT_REPLIES.length] ?? CHAT_REPLIES[0]! },
       ]);
     }, 600);
   };
