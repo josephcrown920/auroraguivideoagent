@@ -75,10 +75,10 @@ function VideoIcon() {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
       <rect x="2" y="5" width="14" height="14" rx="5" />
       <path d="M23 8l-6 4 6 4V8z" />
-et="0" fill="currentColor" />
     </svg>
   );
 }
+
 
 function SendIcon() {
   return (
