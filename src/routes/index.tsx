@@ -60,8 +60,6 @@ const IMAGE_SIZES: Record<Aspect, Record<"2K" | "4K", string>> = {
   "9:16": { "2K": "1440x2560", "4K": "2160x3840" },
 };
 
-const CHAT_SYSTEM =
-  "You are Aurora's Creative Director. Help the user shape vivid image and video prompts: suggest concrete creative directions, lighting, mood, composition, camera and style. Be warm and concise, and offer ready-to-paste prompts.";
 
 function ImageIcon() {
   return (
@@ -239,25 +237,21 @@ function Index() {
   const handleSendChat = async () => {
     const text = chatInput.trim();
     if (!text || chatBusy) return;
-    const history = [...messages, { role: "u" as const, text }];
-    setMessages(history);
+    setMessages((prev) => [...prev, { role: "u", text }]);
     setChatInput("");
     setChatBusy(true);
     try {
-      if (!apiKey.trim()) {
-        throw new Error("Add your ARK API key in Settings so I can reply.");
-      }
-      const data = await callArk<{ choices?: { message?: { content?: string } }[] }>(apiKey, {
-        kind: "chat",
-        messages: [
-          { role: "system", content: CHAT_SYSTEM },
-          ...history.map((m) => ({
-            role: m.role === "u" ? "user" : "assistant",
-            content: m.text,
-          })),
-        ],
+      const res = await fetch("/api/agent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, sessionId: sessionId.trim() || undefined }),
       });
-      const reply = data.choices?.[0]?.message?.content?.trim();
+      const data = (await res.json().catch(() => ({}))) as {
+        reply?: string;
+        error?: { message?: string };
+      };
+      if (!res.ok) throw new Error(data.error?.message || `Request failed (${res.status})`);
+      const reply = data.reply?.trim();
       setMessages((prev) => [...prev, { role: "a", text: reply || "I didn't catch that — try again?" }]);
     } catch (err) {
       setMessages((prev) => [
