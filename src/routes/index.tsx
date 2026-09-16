@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import "../aurora.css";
+import bg1 from "../assets/aurora-bg-1.jpg";
+import bg2 from "../assets/aurora-bg-2.jpg";
+import bg3 from "../assets/aurora-bg-3.jpg";
+import bg4 from "../assets/aurora-bg-4.jpg";
+import bg5 from "../assets/aurora-bg-5.jpg";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -25,6 +30,7 @@ export const Route = createFileRoute("/")({
 });
 
 type Mode = "image" | "video";
+type Aspect = "1:1" | "16:9" | "9:16";
 
 interface Creation {
   id: number;
@@ -50,33 +56,42 @@ const GRADIENTS = [
 const CHAT_REPLIES = [
   "Great idea! Try adding more detail — lighting, mood, and colors help a lot. 🎨",
   "Love it. For best results, describe the scene, the style, and the camera angle.",
-  "Nice prompt! Hit Generate above and I'll help you refine the result afterwards.",
+  "Nice prompt! Hit the send button above and I'll help you refine the result afterwards.",
   "I can help with that — want a cinematic look or something bright and playful?",
 ];
 
 function ImageIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="3" y="3" width="18" height="18" rx="2" />
-      <circle cx="8.5" cy="8.5" r="1.5" />
-      <path d="M21 15l-5-5L5 21" />
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <rect x="3" y="3" width="18" height="18" rx="5" />
+      <circle cx="9" cy="9" r="1.6" />
+      <path d="M21 15.5l-4.5-4.5L6 21.5" />
     </svg>
   );
 }
 
 function VideoIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M23 7l-7 5 7 5V7z" />
-      <rect x="1" y="5" width="15" height="14" rx="2" />
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <rect x="2" y="5" width="14" height="14" rx="5" />
+      <path d="M23 8l-6 4 6 4V8z" />
+et="0" fill="currentColor" />
     </svg>
   );
 }
 
-function SparkleIcon() {
+function SendIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8L12 2z" />
+      <path d="M3.4 20.4l17.8-7.6c.8-.4.8-1.5 0-1.9L3.4 3.6c-.7-.3-1.4.2-1.4.9v4.4c0 .5.4.9.9 1l11.3 2.1-11.3 2.1c-.5.1-.9.5-.9 1v4.4c0 .7.7 1.2 1.4.9z" />
+    </svg>
+  );
+}
+
+function OpenAiMark() {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor">
+      <path d="M22.28 9.82a5.98 5.98 0 0 0-.52-4.91 6.05 6.05 0 0 0-6.51-2.9A6.07 6.07 0 0 0 4.98 4.18a5.98 5.98 0 0 0-4 2.9 6.05 6.05 0 0 0 .75 7.1 5.98 5.98 0 0 0 .51 4.91 6.05 6.05 0 0 0 6.52 2.9A5.98 5.98 0 0 0 13.26 24a6.06 6.06 0 0 0 5.77-4.21 5.99 5.99 0 0 0 4-2.9 6.06 6.06 0 0 0-.75-7.07zm-9.02 12.61a4.48 4.48 0 0 1-2.88-1.04l.14-.08 4.78-2.76a.78.78 0 0 0 .39-.68v-6.74l2.02 1.17a.07.07 0 0 1 .04.05v5.58a4.5 4.5 0 0 1-4.49 4.5zm-9.66-4.13a4.47 4.47 0 0 1-.54-3.01l.14.09 4.78 2.76a.77.77 0 0 0 .78 0l5.84-3.37v2.33a.08.08 0 0 1-.03.06L8.32 19.4a4.5 4.5 0 0 1-4.72-1.1zM2.34 7.9a4.49 4.49 0 0 1 2.37-1.97v5.68a.77.77 0 0 0 .39.68l5.83 3.37-2.02 1.16a.08.08 0 0 1-.07 0L3.6 14.57A4.5 4.5 0 0 1 2.34 7.9zm16.6 3.86l-5.83-3.37 2.02-1.16a.08.08 0 0 1 .07 0l5.24 3.24a4.49 4.49 0 0 1-.69 8.1v-5.68a.78.78 0 0 0-.39-.68h-.42zm2.18-3.29l-.14-.09-4.78-2.76a.77.77 0 0 0-.78 0L9.58 9v-2.3a.07.07 0 0 1 .03-.06l5.24-3.23a4.5 4.5 0 0 1 6.68 4.66zm-12.64 4.13L6.46 11.4a.08.08 0 0 1-.04-.06V5.76a4.5 4.5 0 0 1 7.38-3.45l-.14.08L8.88 5.15a.78.78 0 0 0-.39.68zm1.1-2.37l2.6-1.5 2.6 1.5v3l-2.6 1.5-2.6-1.5z" />
     </svg>
   );
 }
@@ -84,7 +99,7 @@ function SparkleIcon() {
 function Index() {
   const [mode, setMode] = useState<Mode>("image");
   const [prompt, setPrompt] = useState("");
-  const [aspect, setAspect] = useState<"16:9" | "9:16">("16:9");
+  const [aspect, setAspect] = useState<Aspect>("1:1");
   const [resolution, setResolution] = useState<"2K" | "4K">("2K");
   const [creations, setCreations] = useState<Creation[]>([]);
   const [chatOpen, setChatOpen] = useState(false);
@@ -118,6 +133,8 @@ function Index() {
     chatBodyRef.current?.scrollTo({ top: chatBodyRef.current.scrollHeight });
   }, [messages, chatOpen]);
 
+  const model = mode === "image" ? "GPT Image 2 Low" : "GPT Video 1";
+
   const handleGenerate = () => {
     const text = prompt.trim();
     if (!text) return;
@@ -127,7 +144,7 @@ function Index() {
       {
         id: nextId.current++,
         prompt: text,
-        model: mode === "image" ? "Seedream 4.0" : "Seedance 2.5",
+        model,
         kind: mode,
         gradient,
       },
@@ -144,7 +161,12 @@ function Index() {
     setTimeout(() => {
       setMessages((prev) => [
         ...prev,
-        { role: "a", text: CHAT_REPLIES[prev.filter((m) => m.role === "u").length % CHAT_REPLIES.length] ?? CHAT_REPLIES[0]! },
+        {
+          role: "a",
+          text:
+            CHAT_REPLIES[prev.filter((m) => m.role === "u").length % CHAT_REPLIES.length] ??
+            CHAT_REPLIES[0]!,
+        },
       ]);
     }, 600);
   };
@@ -154,16 +176,32 @@ function Index() {
     setSettingsOpen(false);
   };
 
+  const collageCols: string[][] = [
+    [bg1, bg4],
+    [bg2, bg5],
+    [bg3, bg1],
+  ];
+
   return (
     <div className="aurora-body">
       <div className="aurora-bg-layer">
-        <div className="aurora-bg-cards">
-          {[1, 2, 3, 4, 5].map((n) => (
-            <div className="aurora-bg-card" key={n}>
-              <div className="aurora-bg-card-inner" />
+        <div className="aurora-collage">
+          {collageCols.map((col, i) => (
+            <div className={`aurora-collage-col c${i + 1}`} key={i}>
+              {col.map((src, j) => (
+                <img
+                  key={j}
+                  src={src}
+                  alt=""
+                  width={768}
+                  height={1024}
+                  loading={i === 1 && j === 0 ? "eager" : "lazy"}
+                />
+              ))}
             </div>
           ))}
         </div>
+        <div className="aurora-bg-overlay" />
       </div>
 
       <div className="aurora-logo-top">
@@ -187,9 +225,7 @@ function Index() {
           </div>
 
           <h1 className="aurora-h1">
-            Create AI Images &amp; Videos
-            <br />
-            in Seconds
+            Create AI Images &amp; Videos in Seconds
           </h1>
 
           <p className="aurora-subhead">
@@ -221,8 +257,8 @@ function Index() {
                 className="aurora-prompt-input"
                 placeholder={
                   mode === "image"
-                    ? "Describe the image you want to create…"
-                    : "Describe the video you want to create…"
+                    ? "Try describing the image you want to create"
+                    : "Try describing the video you want to create"
                 }
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
@@ -236,26 +272,24 @@ function Index() {
             </div>
             <div className="aurora-controls">
               <button className="aurora-model-pill">
-                <span className="aurora-model-logo">S</span>
-                <span className="name">
-                  {mode === "image" ? "Seedream 4.0" : "Seedance 2.5"}
+                <span className="aurora-model-logo">
+                  <OpenAiMark />
                 </span>
+                <span className="name">{model}</span>
                 <span className="chev">▼</span>
               </button>
 
               <div className="aurora-seg-control">
-                <button
-                  className={`aurora-seg-btn ${aspect === "16:9" ? "active" : ""}`}
-                  onClick={() => setAspect("16:9")}
-                >
-                  16:9
-                </button>
-                <button
-                  className={`aurora-seg-btn ${aspect === "9:16" ? "active" : ""}`}
-                  onClick={() => setAspect("9:16")}
-                >
-                  9:16
-                </button>
+                {(["1:1", "16:9", "9:16"] as Aspect[]).map((a) => (
+                  <button
+                    key={a}
+                    className={`aurora-seg-btn ${aspect === a ? "active" : ""}`}
+                    onClick={() => setAspect(a)}
+                  >
+                    {a === "1:1" && <span className="aurora-square-icon" />}
+                    {a}
+                  </button>
+                ))}
               </div>
 
               <div className="aurora-seg-control">
@@ -274,12 +308,12 @@ function Index() {
               </div>
 
               <button
-                className="aurora-gen-btn"
+                className="aurora-send-btn"
                 onClick={handleGenerate}
                 disabled={!prompt.trim()}
+                aria-label="Generate"
               >
-                <SparkleIcon />
-                Generate
+                <SendIcon />
               </button>
             </div>
           </div>
@@ -287,15 +321,15 @@ function Index() {
           <div className="aurora-stats-row">
             <div className="aurora-stat-item">
               <div className="aurora-stat-num">2025</div>
-              <div className="aurora-stat-label">EDITOR'S PICK</div>
+              <div className="aurora-stat-label">Editor's pick</div>
             </div>
             <div className="aurora-stat-item">
               <div className="aurora-stat-num">10M+</div>
-              <div className="aurora-stat-label">ACTIVE USERS</div>
+              <div className="aurora-stat-label">Active users</div>
             </div>
             <div className="aurora-stat-item">
               <div className="aurora-stat-num">TOP 30</div>
-              <div className="aurora-stat-label">AI PLATFORM</div>
+              <div className="aurora-stat-label">OpenAI Partner</div>
             </div>
           </div>
         </section>
