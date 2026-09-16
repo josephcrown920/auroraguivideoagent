@@ -10,11 +10,17 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiAgentRouteImport } from './routes/api/agent'
 import { Route as ApiArkRouteImport } from './routes/api/ark'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAgentRoute = ApiAgentRouteImport.update({
+  id: '/api/agent',
+  path: '/api/agent',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiArkRoute = ApiArkRouteImport.update({
@@ -25,27 +31,31 @@ const ApiArkRoute = ApiArkRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/api/agent': typeof ApiAgentRoute
   '/api/ark': typeof ApiArkRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/api/agent': typeof ApiAgentRoute
   '/api/ark': typeof ApiArkRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/api/agent': typeof ApiAgentRoute
   '/api/ark': typeof ApiArkRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/ark'
+  fullPaths: '/' | '/api/agent' | '/api/ark'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/ark'
-  id: '__root__' | '/' | '/api/ark'
+  to: '/' | '/api/agent' | '/api/ark'
+  id: '__root__' | '/' | '/api/agent' | '/api/ark'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ApiAgentRoute: typeof ApiAgentRoute
   ApiArkRoute: typeof ApiArkRoute
 }
 
@@ -56,6 +66,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/agent': {
+      id: '/api/agent'
+      path: '/api/agent'
+      fullPath: '/api/agent'
+      preLoaderRoute: typeof ApiAgentRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/ark': {
@@ -70,6 +87,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ApiAgentRoute: ApiAgentRoute,
   ApiArkRoute: ApiArkRoute,
 }
 export const routeTree = rootRouteImport
