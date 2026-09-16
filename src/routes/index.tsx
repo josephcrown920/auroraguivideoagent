@@ -8,6 +8,13 @@ import bg4 from "../assets/aurora-bg-4.jpg";
 import bg5 from "../assets/aurora-bg-5.jpg";
 import moonAsset from "../assets/aurora-moon.jpg.asset.json";
 import chromeAsset from "../assets/aurora-chrome.jpg.asset.json";
+import {
+  CHAT_MODELS,
+  IMAGE_MODELS,
+  VIDEO_MODELS,
+  modelLabel,
+  type ModelOption,
+} from "../lib/aurora-models";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -16,13 +23,13 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Create AI images and videos in seconds. 30+ image tools, state-of-the-art video models — turn any idea into stunning visuals, no design skills needed.",
+          "Create AI images and videos in seconds. Seedream, Seedance and Seed models — turn any idea into stunning visuals, no design skills needed.",
       },
       { property: "og:title", content: "Aurora Creative Studio — AI Images & Videos" },
       {
         property: "og:description",
         content:
-          "30+ image tools, state-of-the-art video models. Turn any idea into stunning visuals — no design skills needed.",
+          "Seedream 5.0 images, Seedance 2.5 video and a creative director in chat. Turn any idea into stunning visuals.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -51,15 +58,31 @@ interface ChatMsg {
   text: string;
 }
 
-const IMAGE_MODEL = "Seedream 4.0";
-const VIDEO_MODEL = "Seedance 1.0 Lite";
-
 const IMAGE_SIZES: Record<Aspect, Record<"2K" | "4K", string>> = {
   "1:1": { "2K": "2048x2048", "4K": "4096x4096" },
   "16:9": { "2K": "2560x1440", "4K": "3840x2160" },
   "9:16": { "2K": "1440x2560", "4K": "2160x3840" },
 };
 
+const WELCOME: ChatMsg = {
+  role: "a",
+  text: "Welcome to Aurora Creative Studio! Tell me what you're imagining and I'll turn it into a shootable prompt. 🎬",
+};
+
+const STORE_KEY = "aurora_state_v2";
+
+interface StoredState {
+  mode?: Mode;
+  aspect?: Aspect;
+  resolution?: "2K" | "4K";
+  duration?: number;
+  imageModel?: string;
+  videoModel?: string;
+  chatModel?: string;
+  bg?: BgTheme;
+  creations?: Creation[];
+  messages?: ChatMsg[];
+}
 
 function ImageIcon() {
   return (
@@ -88,7 +111,7 @@ function SendIcon() {
   );
 }
 
-function OpenAiMark() {
+function SparkMark() {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor">
       <path d="M12 2l2.4 6.2L21 10l-5.2 3.4L17 21l-5-3.4L7 21l1.2-7.6L3 10l6.6-1.8z" />
@@ -96,12 +119,10 @@ function OpenAiMark() {
   );
 }
 
-async function callArk<T>(key: string, body: unknown): Promise<T> {
-  const res = await fetch("/api/ark", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-ark-key": key },
-    body: JSON.stringify(body),
-  });
+async function callArk<T>(body: unknown, key?: string): Promise<T> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (key?.trim()) headers["x-ark-key"] = key.trim();
+  const res = await fetch("/api/ark", { method: "POST", headers, body: JSON.stringify(body) });
   const json = (await res.json().catch(() => ({}))) as {
     error?: { message?: string };
     message?: string;
@@ -113,28 +134,33 @@ async function callArk<T>(key: string, body: unknown): Promise<T> {
 }
 
 function Index() {
+  const [hydrated, setHydrated] = useState(false);
   const [mode, setMode] = useState<Mode>("image");
   const [prompt, setPrompt] = useState("");
   const [aspect, setAspect] = useState<Aspect>("1:1");
   const [resolution, setResolution] = useState<"2K" | "4K">("2K");
+  const [duration, setDuration] = useState(5);
+  const [imageModel, setImageModel] = useState(IMAGE_MODELS[0]!.id);
+  const [videoModel, setVideoModel] = useState(VIDEO_MODELS[0]!.id);
+  const [chatModel, setChatModel] = useState(CHAT_MODELS[0]!.id);
+  const [modelMenuOpen, setModelMenuOpen] = useState(false);
+  const [chatMenuOpen, setChatMenuOpen] = useState(false);
+  const [refUrl, setRefUrl] = useState("");
+  const [refOpen, setRefOpen] = useState(false);
   const [creations, setCreations] = useState<Creation[]>([]);
   const [busy, setBusy] = useState(false);
   const [bg, setBg] = useState<BgTheme>("moon");
   const [chatOpen, setChatOpen] = useState(false);
   const [chatInput, setChatInput] = useState("");
   const [chatBusy, setChatBusy] = useState(false);
-  const [messages, setMessages] = useState<ChatMsg[]>([
-    {
-      role: "a",
-      text: "Welcome to Aurora Creative Studio! Tell me what you're imagining and I'll turn it into a shootable prompt. 🎬",
-    },
-  ]);
+  const [messages, setMessages] = useState<ChatMsg[]>([WELCOME]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [apiKey, setApiKey] = useState("");
   const [sessionId, setSessionId] = useState("");
   const chatBodyRef = useRef<HTMLDivElement>(null);
   const nextId = useRef(1);
 
+  // ---- persistent memory ----
   useEffect(() => {
     try {
       const saved = localStorage.getItem("aurora_settings");
@@ -143,32 +169,85 @@ function Index() {
         setApiKey(s.apiKey ?? "");
         setSessionId(s.sessionId ?? "");
       }
-      const savedBg = localStorage.getItem("aurora_bg");
-      if (savedBg === "moon" || savedBg === "chrome" || savedBg === "collage") {
-        setBg(savedBg);
+      const raw = localStorage.getItem(STORE_KEY);
+      if (raw) {
+        const s = JSON.parse(raw) as StoredState;
+        if (s.mode) setMode(s.mode);
+        if (s.aspect) setAspect(s.aspect);
+        if (s.resolution) setResolution(s.resolution);
+        if (s.duration) setDuration(s.duration);
+        if (s.imageModel) setImageModel(s.imageModel);
+        if (s.videoModel) setVideoModel(s.videoModel);
+        if (s.chatModel) setChatModel(s.chatModel);
+        if (s.bg) setBg(s.bg);
+        if (s.messages?.length) setMessages(s.messages);
+        if (s.creations?.length) {
+          const restored = s.creations.map((c) =>
+            c.status === "pending"
+              ? { ...c, status: "error" as const, error: "Interrupted — generate again." }
+              : c,
+          );
+          setCreations(restored);
+          nextId.current = Math.max(...restored.map((c) => c.id)) + 1;
+        }
+      } else {
+        const legacyBg = localStorage.getItem("aurora_bg");
+        if (legacyBg === "moon" || legacyBg === "chrome" || legacyBg === "collage") setBg(legacyBg);
       }
     } catch {
       // ignore
     }
+    setHydrated(true);
   }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      const state: StoredState = {
+        mode,
+        aspect,
+        resolution,
+        duration,
+        imageModel,
+        videoModel,
+        chatModel,
+        bg,
+        creations: creations.slice(0, 40),
+        messages: messages.slice(-60),
+      };
+      localStorage.setItem(STORE_KEY, JSON.stringify(state));
+    } catch {
+      // ignore (quota)
+    }
+  }, [
+    hydrated,
+    mode,
+    aspect,
+    resolution,
+    duration,
+    imageModel,
+    videoModel,
+    chatModel,
+    bg,
+    creations,
+    messages,
+  ]);
 
   useEffect(() => {
     chatBodyRef.current?.scrollTo({ top: chatBodyRef.current.scrollHeight });
   }, [messages, chatOpen, chatBusy]);
 
-  const model = mode === "image" ? IMAGE_MODEL : VIDEO_MODEL;
-
-  const chooseBg = (theme: BgTheme) => {
-    setBg(theme);
-    try {
-      localStorage.setItem("aurora_bg", theme);
-    } catch {
-      // ignore
-    }
-  };
+  const modelList: ModelOption[] = mode === "image" ? IMAGE_MODELS : VIDEO_MODELS;
+  const activeModel = mode === "image" ? imageModel : videoModel;
 
   const updateCreation = (id: number, patch: Partial<Creation>) => {
     setCreations((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
+  };
+
+  const pickModel = (id: string) => {
+    if (mode === "image") setImageModel(id);
+    else setVideoModel(id);
+    setModelMenuOpen(false);
   };
 
   const handleGenerate = async () => {
@@ -177,33 +256,51 @@ function Index() {
     const id = nextId.current++;
     const currentMode = mode;
     const currentAspect = aspect;
+    const currentModel = activeModel;
+    const reference = refUrl.trim() || undefined;
     setCreations((prev) => [
-      { id, prompt: text, model, kind: currentMode, aspect: currentAspect, status: "pending" },
+      {
+        id,
+        prompt: text,
+        model: modelLabel(currentModel, modelList),
+        kind: currentMode,
+        aspect: currentAspect,
+        status: "pending",
+      },
       ...prev,
     ]);
     setPrompt("");
     setBusy(true);
 
     try {
-      if (!apiKey.trim()) {
-        throw new Error("Add your ARK API key in Settings to start generating.");
-      }
       if (currentMode === "image") {
-        const data = await callArk<{ data?: { url?: string; b64_json?: string }[] }>(apiKey, {
-          kind: "image",
-          prompt: text,
-          size: IMAGE_SIZES[currentAspect][resolution],
-        });
+        const data = await callArk<{ data?: { url?: string; b64_json?: string }[] }>(
+          {
+            kind: "image",
+            model: currentModel,
+            prompt: text,
+            size: IMAGE_SIZES[currentAspect][resolution],
+            imageUrl: reference,
+          },
+          apiKey,
+        );
         const first = data.data?.[0];
-        const url = first?.url ?? (first?.b64_json ? `data:image/png;base64,${first.b64_json}` : undefined);
+        const url =
+          first?.url ?? (first?.b64_json ? `data:image/png;base64,${first.b64_json}` : undefined);
         if (!url) throw new Error("No image was returned.");
         updateCreation(id, { status: "done", url });
       } else {
-        const task = await callArk<{ id?: string }>(apiKey, {
-          kind: "video",
-          prompt: text,
-          ratio: currentAspect,
-        });
+        const task = await callArk<{ id?: string }>(
+          {
+            kind: "video",
+            model: currentModel,
+            prompt: text,
+            ratio: currentAspect,
+            duration,
+            imageUrl: reference,
+          },
+          apiKey,
+        );
         if (!task.id) throw new Error("No video task was created.");
         let url: string | undefined;
         for (let i = 0; i < 120; i++) {
@@ -212,7 +309,7 @@ function Index() {
             status?: string;
             content?: { video_url?: string };
             error?: { message?: string };
-          }>(apiKey, { kind: "videoStatus", taskId: task.id });
+          }>({ kind: "videoStatus", taskId: task.id }, apiKey);
           if (status.status === "succeeded") {
             url = status.content?.video_url;
             break;
@@ -237,22 +334,49 @@ function Index() {
   const handleSendChat = async () => {
     const text = chatInput.trim();
     if (!text || chatBusy) return;
-    setMessages((prev) => [...prev, { role: "u", text }]);
+    const history = [...messages, { role: "u" as const, text }];
+    setMessages(history);
     setChatInput("");
     setChatBusy(true);
     try {
-      const res = await fetch("/api/agent", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, sessionId: sessionId.trim() || undefined }),
-      });
-      const data = (await res.json().catch(() => ({}))) as {
-        reply?: string;
-        error?: { message?: string };
-      };
-      if (!res.ok) throw new Error(data.error?.message || `Request failed (${res.status})`);
-      const reply = data.reply?.trim();
-      setMessages((prev) => [...prev, { role: "a", text: reply || "I didn't catch that — try again?" }]);
+      let reply: string | undefined;
+      if (chatModel === "agent") {
+        const res = await fetch("/api/agent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text, sessionId: sessionId.trim() || undefined }),
+        });
+        const data = (await res.json().catch(() => ({}))) as {
+          reply?: string;
+          error?: { message?: string };
+        };
+        if (!res.ok) throw new Error(data.error?.message || `Request failed (${res.status})`);
+        reply = data.reply;
+      } else {
+        const data = await callArk<{ choices?: { message?: { content?: string } }[] }>(
+          {
+            kind: "chat",
+            model: chatModel,
+            messages: [
+              {
+                role: "system",
+                content:
+                  "You are Aurora Creative Director, helping musicians and creators craft cinematic image and video prompts. Be concise and vivid.",
+              },
+              ...history.slice(-20).map((m) => ({
+                role: m.role === "u" ? "user" : "assistant",
+                content: m.text,
+              })),
+            ],
+          },
+          apiKey,
+        );
+        reply = data.choices?.[0]?.message?.content;
+      }
+      setMessages((prev) => [
+        ...prev,
+        { role: "a", text: reply?.trim() || "I didn't catch that — try again?" },
+      ]);
     } catch (err) {
       setMessages((prev) => [
         ...prev,
@@ -264,8 +388,22 @@ function Index() {
   };
 
   const saveSettings = () => {
-    localStorage.setItem("aurora_settings", JSON.stringify({ apiKey, sessionId }));
+    try {
+      localStorage.setItem("aurora_settings", JSON.stringify({ apiKey, sessionId }));
+    } catch {
+      // ignore
+    }
     setSettingsOpen(false);
+  };
+
+  const clearHistory = () => {
+    setCreations([]);
+    setMessages([WELCOME]);
+    try {
+      localStorage.removeItem(STORE_KEY);
+    } catch {
+      // ignore
+    }
   };
 
   const collageCols: string[][] = [
@@ -312,7 +450,7 @@ function Index() {
             <button
               key={t}
               className={`aurora-bg-btn ${bg === t ? "active" : ""}`}
-              onClick={() => chooseBg(t)}
+              onClick={() => setBg(t)}
               aria-pressed={bg === t}
             >
               {t === "moon" ? "Moon" : t === "chrome" ? "Chrome" : "Collage"}
@@ -333,27 +471,33 @@ function Index() {
         <section className="aurora-hero">
           <div className="aurora-top-badge">
             <span className="new-pill">New</span>
-            Seedance 2.5 is coming soon
+            Seedance 2.5 &amp; Seedream 5.0 are live
           </div>
 
           <h1 className="aurora-h1">Create AI Images &amp; Videos in Seconds</h1>
 
           <p className="aurora-subhead">
-            30+ image tools, state-of-the-art video models, and growing. Turn any idea into
+            Seedream and Seedance models, plus a creative director in chat. Turn any idea into
             stunning visuals — no design skills needed.
           </p>
 
           <div className="aurora-mode-switch">
             <button
               className={`aurora-mode-btn ${mode === "image" ? "active" : ""}`}
-              onClick={() => setMode("image")}
+              onClick={() => {
+                setMode("image");
+                setModelMenuOpen(false);
+              }}
             >
               <ImageIcon />
               Image
             </button>
             <button
               className={`aurora-mode-btn ${mode === "video" ? "active" : ""}`}
-              onClick={() => setMode("video")}
+              onClick={() => {
+                setMode("video");
+                setModelMenuOpen(false);
+              }}
             >
               <VideoIcon />
               Video
@@ -362,7 +506,12 @@ function Index() {
 
           <div className="aurora-prompt-card">
             <div className="aurora-prompt-top">
-              <button className="aurora-add-btn" aria-label="Add reference">
+              <button
+                className={`aurora-add-btn ${refUrl.trim() ? "has-ref" : ""}`}
+                aria-label="Add reference image"
+                aria-expanded={refOpen}
+                onClick={() => setRefOpen((v) => !v)}
+              >
                 +
               </button>
               <textarea
@@ -382,14 +531,53 @@ function Index() {
                 }}
               />
             </div>
+
+            {refOpen && (
+              <div className="aurora-ref-row">
+                <input
+                  value={refUrl}
+                  onChange={(e) => setRefUrl(e.target.value)}
+                  placeholder="Paste a reference image URL (optional)"
+                  aria-label="Reference image URL"
+                />
+                {refUrl.trim() && (
+                  <button className="aurora-ref-clear" onClick={() => setRefUrl("")}>
+                    Clear
+                  </button>
+                )}
+              </div>
+            )}
+
             <div className="aurora-controls">
-              <button className="aurora-model-pill">
-                <span className="aurora-model-logo">
-                  <OpenAiMark />
-                </span>
-                <span className="name">{model}</span>
-                <span className="chev">▼</span>
-              </button>
+              <div className="aurora-model-wrap">
+                <button
+                  className="aurora-model-pill"
+                  onClick={() => setModelMenuOpen((v) => !v)}
+                  aria-expanded={modelMenuOpen}
+                >
+                  <span className="aurora-model-logo">
+                    <SparkMark />
+                  </span>
+                  <span className="name">{modelLabel(activeModel, modelList)}</span>
+                  <span className="chev">▼</span>
+                </button>
+                {modelMenuOpen && (
+                  <div className="aurora-menu" role="listbox">
+                    {modelList.map((m) => (
+                      <button
+                        key={m.id}
+                        className={`aurora-menu-item ${m.id === activeModel ? "active" : ""}`}
+                        onClick={() => pickModel(m.id)}
+                        role="option"
+                        aria-selected={m.id === activeModel}
+                      >
+                        <span>{m.label}</span>
+                        <small>{m.vendor}</small>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               <div className="aurora-seg-control">
                 {(["1:1", "16:9", "9:16"] as Aspect[]).map((a) => (
@@ -404,20 +592,31 @@ function Index() {
                 ))}
               </div>
 
-              <div className="aurora-seg-control">
-                <button
-                  className={`aurora-seg-btn ${resolution === "2K" ? "active" : ""}`}
-                  onClick={() => setResolution("2K")}
-                >
-                  2K
-                </button>
-                <button
-                  className={`aurora-seg-btn ${resolution === "4K" ? "active" : ""}`}
-                  onClick={() => setResolution("4K")}
-                >
-                  4K
-                </button>
-              </div>
+              {mode === "image" ? (
+                <div className="aurora-seg-control">
+                  {(["2K", "4K"] as const).map((r) => (
+                    <button
+                      key={r}
+                      className={`aurora-seg-btn ${resolution === r ? "active" : ""}`}
+                      onClick={() => setResolution(r)}
+                    >
+                      {r}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="aurora-seg-control">
+                  {[5, 10].map((d) => (
+                    <button
+                      key={d}
+                      className={`aurora-seg-btn ${duration === d ? "active" : ""}`}
+                      onClick={() => setDuration(d)}
+                    >
+                      {d}s
+                    </button>
+                  ))}
+                </div>
+              )}
 
               <button
                 className="aurora-send-btn"
@@ -432,27 +631,34 @@ function Index() {
 
           <div className="aurora-stats-row">
             <div className="aurora-stat-item">
-              <div className="aurora-stat-num">2025</div>
-              <div className="aurora-stat-label">Editor's pick</div>
+              <div className="aurora-stat-num">{IMAGE_MODELS.length}</div>
+              <div className="aurora-stat-label">Image models</div>
             </div>
             <div className="aurora-stat-item">
-              <div className="aurora-stat-num">10M+</div>
-              <div className="aurora-stat-label">Active users</div>
+              <div className="aurora-stat-num">{VIDEO_MODELS.length}</div>
+              <div className="aurora-stat-label">Video models</div>
             </div>
             <div className="aurora-stat-item">
-              <div className="aurora-stat-num">TOP 30</div>
-              <div className="aurora-stat-label">AI Platform</div>
+              <div className="aurora-stat-num">{CHAT_MODELS.length - 1}</div>
+              <div className="aurora-stat-label">Chat models</div>
             </div>
           </div>
         </section>
 
         <section className="aurora-gallery">
-          <h2>Your Creations</h2>
+          <div className="aurora-gallery-hd">
+            <h2>Your Creations</h2>
+            {creations.length > 0 && (
+              <button className="aurora-btn-s" onClick={clearHistory}>
+                Clear history
+              </button>
+            )}
+          </div>
           {creations.length === 0 ? (
             <div className="aurora-empty">
               <div className="spark">✨</div>
               <h3>✨ Your first creation</h3>
-              <p>Generate something amazing to see it here</p>
+              <p>Generate something amazing to see it here — it stays saved on this device</p>
             </div>
           ) : (
             <div className="aurora-gallery-grid">
@@ -490,7 +696,34 @@ function Index() {
       {chatOpen && (
         <div className="aurora-chat-panel">
           <div className="aurora-chat-hd">
-            <h3>🎬 Aurora Creative Director</h3>
+            <div className="aurora-model-wrap">
+              <button
+                className="aurora-chat-model"
+                onClick={() => setChatMenuOpen((v) => !v)}
+                aria-expanded={chatMenuOpen}
+              >
+                🎬 {modelLabel(chatModel, CHAT_MODELS)} <span className="chev">▼</span>
+              </button>
+              {chatMenuOpen && (
+                <div className="aurora-menu up" role="listbox">
+                  {CHAT_MODELS.map((m) => (
+                    <button
+                      key={m.id}
+                      className={`aurora-menu-item ${m.id === chatModel ? "active" : ""}`}
+                      onClick={() => {
+                        setChatModel(m.id);
+                        setChatMenuOpen(false);
+                      }}
+                      role="option"
+                      aria-selected={m.id === chatModel}
+                    >
+                      <span>{m.label}</span>
+                      <small>{m.vendor}</small>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <button
               className="aurora-chat-close"
               aria-label="Close chat"
@@ -516,7 +749,7 @@ function Index() {
                 if (e.key === "Enter") void handleSendChat();
               }}
             />
-            <button onClick={() => void handleSendChat()} disabled={chatBusy}>
+            <button onClick={() => void handleSendChat()} disabled={chatBusy || !chatInput.trim()}>
               Send
             </button>
           </div>
@@ -528,13 +761,13 @@ function Index() {
           <div className="aurora-modal-box" onClick={(e) => e.stopPropagation()}>
             <h2>Settings</h2>
             <div className="aurora-fld">
-              <label htmlFor="aurora-api-key">ARK API Key</label>
+              <label htmlFor="aurora-api-key">ARK API Key (optional)</label>
               <input
                 id="aurora-api-key"
                 type="password"
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
-                placeholder="Enter your ARK API key"
+                placeholder="Leave empty to use the built-in key"
               />
             </div>
             <div className="aurora-fld">
@@ -544,7 +777,7 @@ function Index() {
                 type="text"
                 value={sessionId}
                 onChange={(e) => setSessionId(e.target.value)}
-                placeholder="Enter your session ID"
+                placeholder="Optional — override the creative director session"
               />
             </div>
             <div className="aurora-m-actions">
