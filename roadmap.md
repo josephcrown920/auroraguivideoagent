@@ -6,3 +6,7 @@
 - [x] Restyle UI to frosted-glass design per user screenshot (glass mode switch, glass prompt card, model pill, send button, collage hero background)
 - [x] Update gallery/chat/settings to match glass style
 - [x] Verify in preview (Playwright: render, generate flow, chat panel — no console errors)
+- [x] Moon / Chrome / Collage background switcher with saved choice
+- [x] Wire Generate to ARK image + video generation via /api/ark proxy, results in gallery
+- [x] Real ARK-powered creative-director chat panel
+- [x] Export project zip to Files
