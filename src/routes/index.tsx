@@ -158,7 +158,23 @@ function Index() {
   const [apiKey, setApiKey] = useState("");
   const [sessionId, setSessionId] = useState("");
   const chatBodyRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const nextId = useRef(1);
+
+  const handleRefFile = async (file?: File) => {
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) {
+      window.alert("That image is larger than 8 MB — please pick a smaller one.");
+      return;
+    }
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(new Error("Could not read that file."));
+      reader.readAsDataURL(file);
+    });
+    setRefUrl(dataUrl);
+  };
 
   // ---- persistent memory ----
   useEffect(() => {
