@@ -13,7 +13,9 @@ import {
   IMAGE_MODELS,
   VIDEO_MODELS,
   modelLabel,
+  modelProvider,
   type ModelOption,
+  type Provider,
 } from "../lib/aurora-models";
 
 export const Route = createFileRoute("/")({
@@ -119,10 +121,11 @@ function SparkMark() {
   );
 }
 
-async function callArk<T>(body: unknown, key?: string): Promise<T> {
+async function callApi<T>(provider: Provider, body: unknown, key?: string): Promise<T> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (key?.trim()) headers["x-ark-key"] = key.trim();
-  const res = await fetch("/api/ark", { method: "POST", headers, body: JSON.stringify(body) });
+  if (key?.trim() && provider === "ark") headers["x-ark-key"] = key.trim();
+  const endpoint = provider === "zenmux" ? "/api/zenmux" : "/api/ark";
+  const res = await fetch(endpoint, { method: "POST", headers, body: JSON.stringify(body) });
   const json = (await res.json().catch(() => ({}))) as {
     error?: { message?: string };
     message?: string;
@@ -285,6 +288,7 @@ function Index() {
     const currentMode = mode;
     const currentAspect = aspect;
     const currentModel = activeModel;
+    const provider = modelProvider(currentModel, modelList);
     const reference = refUrl.trim() || undefined;
     setCreations((prev) => [
       {
@@ -302,7 +306,8 @@ function Index() {
 
     try {
       if (currentMode === "image") {
-        const data = await callArk<{ data?: { url?: string; b64_json?: string }[] }>(
+        const data = await callApi<{ data?: { url?: string; b64_json?: string }[] }>(
+          provider,
           {
             kind: "image",
             model: currentModel,
@@ -318,7 +323,8 @@ function Index() {
         if (!url) throw new Error("No image was returned.");
         updateCreation(id, { status: "done", url });
       } else {
-        const task = await callArk<{ id?: string }>(
+        const task = await callApi<{ id?: string }>(
+          provider,
           {
             kind: "video",
             model: currentModel,
@@ -333,11 +339,11 @@ function Index() {
         let url: string | undefined;
         for (let i = 0; i < 120; i++) {
           await new Promise((r) => setTimeout(r, 5000));
-          const status = await callArk<{
+          const status = await callApi<{
             status?: string;
             content?: { video_url?: string };
             error?: { message?: string };
-          }>({ kind: "videoStatus", taskId: task.id }, apiKey);
+          }>(provider, { kind: "videoStatus", taskId: task.id }, apiKey);
           if (status.status === "succeeded") {
             url = status.content?.video_url;
             break;
@@ -381,7 +387,8 @@ function Index() {
         if (!res.ok) throw new Error(data.error?.message || `Request failed (${res.status})`);
         reply = data.reply;
       } else {
-        const data = await callArk<{ choices?: { message?: { content?: string } }[] }>(
+        const data = await callApi<{ choices?: { message?: { content?: string } }[] }>(
+          modelProvider(chatModel, CHAT_MODELS),
           {
             kind: "chat",
             model: chatModel,

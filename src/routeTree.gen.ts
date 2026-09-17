@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiAgentRouteImport } from './routes/api/agent'
 import { Route as ApiArkRouteImport } from './routes/api/ark'
+import { Route as ApiZenmuxRouteImport } from './routes/api/zenmux'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -28,35 +29,44 @@ const ApiArkRoute = ApiArkRouteImport.update({
   path: '/api/ark',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiZenmuxRoute = ApiZenmuxRouteImport.update({
+  id: '/api/zenmux',
+  path: '/api/zenmux',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/agent': typeof ApiAgentRoute
   '/api/ark': typeof ApiArkRoute
+  '/api/zenmux': typeof ApiZenmuxRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/agent': typeof ApiAgentRoute
   '/api/ark': typeof ApiArkRoute
+  '/api/zenmux': typeof ApiZenmuxRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/api/agent': typeof ApiAgentRoute
   '/api/ark': typeof ApiArkRoute
+  '/api/zenmux': typeof ApiZenmuxRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/agent' | '/api/ark'
+  fullPaths: '/' | '/api/agent' | '/api/ark' | '/api/zenmux'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/agent' | '/api/ark'
-  id: '__root__' | '/' | '/api/agent' | '/api/ark'
+  to: '/' | '/api/agent' | '/api/ark' | '/api/zenmux'
+  id: '__root__' | '/' | '/api/agent' | '/api/ark' | '/api/zenmux'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApiAgentRoute: typeof ApiAgentRoute
   ApiArkRoute: typeof ApiArkRoute
+  ApiZenmuxRoute: typeof ApiZenmuxRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -82,6 +92,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiArkRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/zenmux': {
+      id: '/api/zenmux'
+      path: '/api/zenmux'
+      fullPath: '/api/zenmux'
+      preLoaderRoute: typeof ApiZenmuxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -89,6 +106,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApiAgentRoute: ApiAgentRoute,
   ApiArkRoute: ApiArkRoute,
+  ApiZenmuxRoute: ApiZenmuxRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
