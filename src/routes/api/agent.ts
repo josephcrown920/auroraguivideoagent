@@ -62,20 +62,23 @@ export const Route = createFileRoute("/api/agent")({
         }
         const sentId = postJson.data?.[0]?.id;
 
-        // Poll the session until the agent finishes this turn.
-        for (let i = 0; i < 60; i++) {
+        // Poll newest-first until the agent finishes this turn.
+        for (let i = 0; i < 90; i++) {
           await new Promise((r) => setTimeout(r, 2000));
 
-          const evRes = await fetch(`${base}/events`, { headers });
+          const evRes = await fetch(`${base}/events?order=desc&limit=50`, { headers });
           if (!evRes.ok) continue;
           const evJson = (await evRes.json().catch(() => ({}))) as { data?: ArkEvent[] };
-          const events = evJson.data ?? [];
-          const startIdx = sentId ? events.findIndex((e) => e.id === sentId) : -1;
-          const fresh = startIdx >= 0 ? events.slice(startIdx + 1) : events;
+          const newestFirst = evJson.data ?? [];
+          // Everything newer than the message we just posted.
+          const cut = sentId ? newestFirst.findIndex((e) => e.id === sentId) : -1;
+          const fresh = cut >= 0 ? newestFirst.slice(0, cut) : newestFirst;
+          if (cut < 0 && i < 3) continue;
 
           const idle = fresh.some((e) => e.type === "session.status_idle");
           const replies = fresh
             .filter((e) => e.type === "agent.message")
+            .reverse()
             .flatMap((e) => (e.content ?? []).map((c) => c.text).filter(Boolean));
           const media = fresh
             .flatMap((e) => e.content ?? [])
