@@ -13,7 +13,9 @@ import {
   IMAGE_MODELS,
   VIDEO_MODELS,
   modelLabel,
+  modelProvider,
   type ModelOption,
+  type Provider,
 } from "../lib/aurora-models";
 
 export const Route = createFileRoute("/")({
@@ -119,10 +121,11 @@ function SparkMark() {
   );
 }
 
-async function callArk<T>(body: unknown, key?: string): Promise<T> {
+async function callApi<T>(provider: Provider, body: unknown, key?: string): Promise<T> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (key?.trim()) headers["x-ark-key"] = key.trim();
-  const res = await fetch("/api/ark", { method: "POST", headers, body: JSON.stringify(body) });
+  if (key?.trim() && provider === "ark") headers["x-ark-key"] = key.trim();
+  const endpoint = provider === "zenmux" ? "/api/zenmux" : "/api/ark";
+  const res = await fetch(endpoint, { method: "POST", headers, body: JSON.stringify(body) });
   const json = (await res.json().catch(() => ({}))) as {
     error?: { message?: string };
     message?: string;
