@@ -158,7 +158,23 @@ function Index() {
   const [apiKey, setApiKey] = useState("");
   const [sessionId, setSessionId] = useState("");
   const chatBodyRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const nextId = useRef(1);
+
+  const handleRefFile = async (file?: File) => {
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) {
+      window.alert("That image is larger than 8 MB — please pick a smaller one.");
+      return;
+    }
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(new Error("Could not read that file."));
+      reader.readAsDataURL(file);
+    });
+    setRefUrl(dataUrl);
+  };
 
   // ---- persistent memory ----
   useEffect(() => {
@@ -236,6 +252,18 @@ function Index() {
   useEffect(() => {
     chatBodyRef.current?.scrollTo({ top: chatBodyRef.current.scrollHeight });
   }, [messages, chatOpen, chatBusy]);
+
+  useEffect(() => {
+    if (!modelMenuOpen && !chatMenuOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (!(e.target as HTMLElement).closest(".aurora-model-wrap")) {
+        setModelMenuOpen(false);
+        setChatMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [modelMenuOpen, chatMenuOpen]);
 
   const modelList: ModelOption[] = mode === "image" ? IMAGE_MODELS : VIDEO_MODELS;
   const activeModel = mode === "image" ? imageModel : videoModel;
@@ -512,7 +540,7 @@ function Index() {
                 aria-expanded={refOpen}
                 onClick={() => setRefOpen((v) => !v)}
               >
-                +
+                {refUrl.trim() ? <img src={refUrl} alt="Reference" /> : "+"}
               </button>
               <textarea
                 className="aurora-prompt-input"
@@ -534,12 +562,28 @@ function Index() {
 
             {refOpen && (
               <div className="aurora-ref-row">
+                {refUrl.trim() && <img className="aurora-ref-thumb" src={refUrl} alt="Reference" />}
                 <input
-                  value={refUrl}
+                  type="text"
+                  value={refUrl.startsWith("data:") ? "" : refUrl}
                   onChange={(e) => setRefUrl(e.target.value)}
-                  placeholder="Paste a reference image URL (optional)"
+                  placeholder={
+                    refUrl.startsWith("data:")
+                      ? "Uploaded image in use as style reference"
+                      : "Paste a reference image URL, or upload one"
+                  }
                   aria-label="Reference image URL"
                 />
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={(e) => void handleRefFile(e.target.files?.[0])}
+                />
+                <button className="aurora-ref-upload" onClick={() => fileRef.current?.click()}>
+                  Upload image
+                </button>
                 {refUrl.trim() && (
                   <button className="aurora-ref-clear" onClick={() => setRefUrl("")}>
                     Clear
@@ -572,7 +616,7 @@ function Index() {
                         aria-selected={m.id === activeModel}
                       >
                         <span>{m.label}</span>
-                        <small>{m.vendor}</small>
+                        <small>{m.note ?? m.vendor}</small>
                       </button>
                     ))}
                   </div>
@@ -718,7 +762,7 @@ function Index() {
                       aria-selected={m.id === chatModel}
                     >
                       <span>{m.label}</span>
-                      <small>{m.vendor}</small>
+                      <small>{m.note ?? m.vendor}</small>
                     </button>
                   ))}
                 </div>
