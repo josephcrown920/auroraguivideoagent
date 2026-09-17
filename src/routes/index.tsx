@@ -253,6 +253,18 @@ function Index() {
     chatBodyRef.current?.scrollTo({ top: chatBodyRef.current.scrollHeight });
   }, [messages, chatOpen, chatBusy]);
 
+  useEffect(() => {
+    if (!modelMenuOpen && !chatMenuOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (!(e.target as HTMLElement).closest(".aurora-model-wrap")) {
+        setModelMenuOpen(false);
+        setChatMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [modelMenuOpen, chatMenuOpen]);
+
   const modelList: ModelOption[] = mode === "image" ? IMAGE_MODELS : VIDEO_MODELS;
   const activeModel = mode === "image" ? imageModel : videoModel;
 
