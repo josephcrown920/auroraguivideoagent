@@ -288,6 +288,7 @@ function Index() {
     const currentMode = mode;
     const currentAspect = aspect;
     const currentModel = activeModel;
+    const provider = modelProvider(currentModel, modelList);
     const reference = refUrl.trim() || undefined;
     setCreations((prev) => [
       {
@@ -305,7 +306,8 @@ function Index() {
 
     try {
       if (currentMode === "image") {
-        const data = await callArk<{ data?: { url?: string; b64_json?: string }[] }>(
+        const data = await callApi<{ data?: { url?: string; b64_json?: string }[] }>(
+          provider,
           {
             kind: "image",
             model: currentModel,
@@ -321,7 +323,8 @@ function Index() {
         if (!url) throw new Error("No image was returned.");
         updateCreation(id, { status: "done", url });
       } else {
-        const task = await callArk<{ id?: string }>(
+        const task = await callApi<{ id?: string }>(
+          provider,
           {
             kind: "video",
             model: currentModel,
@@ -336,11 +339,11 @@ function Index() {
         let url: string | undefined;
         for (let i = 0; i < 120; i++) {
           await new Promise((r) => setTimeout(r, 5000));
-          const status = await callArk<{
+          const status = await callApi<{
             status?: string;
             content?: { video_url?: string };
             error?: { message?: string };
-          }>({ kind: "videoStatus", taskId: task.id }, apiKey);
+          }>(provider, { kind: "videoStatus", taskId: task.id }, apiKey);
           if (status.status === "succeeded") {
             url = status.content?.video_url;
             break;
@@ -384,7 +387,8 @@ function Index() {
         if (!res.ok) throw new Error(data.error?.message || `Request failed (${res.status})`);
         reply = data.reply;
       } else {
-        const data = await callArk<{ choices?: { message?: { content?: string } }[] }>(
+        const data = await callApi<{ choices?: { message?: { content?: string } }[] }>(
+          modelProvider(chatModel, CHAT_MODELS),
           {
             kind: "chat",
             model: chatModel,
