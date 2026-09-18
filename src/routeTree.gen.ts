@@ -12,6 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiAgentRouteImport } from './routes/api/agent'
 import { Route as ApiArkRouteImport } from './routes/api/ark'
+import { Route as ApiChatStreamRouteImport } from './routes/api/chat-stream'
+import { Route as ApiSpeechRouteImport } from './routes/api/speech'
 import { Route as ApiZenmuxRouteImport } from './routes/api/zenmux'
 
 const IndexRoute = IndexRouteImport.update({
@@ -29,6 +31,16 @@ const ApiArkRoute = ApiArkRouteImport.update({
   path: '/api/ark',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiChatStreamRoute = ApiChatStreamRouteImport.update({
+  id: '/api/chat-stream',
+  path: '/api/chat-stream',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSpeechRoute = ApiSpeechRouteImport.update({
+  id: '/api/speech',
+  path: '/api/speech',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiZenmuxRoute = ApiZenmuxRouteImport.update({
   id: '/api/zenmux',
   path: '/api/zenmux',
@@ -39,12 +51,16 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/agent': typeof ApiAgentRoute
   '/api/ark': typeof ApiArkRoute
+  '/api/chat-stream': typeof ApiChatStreamRoute
+  '/api/speech': typeof ApiSpeechRoute
   '/api/zenmux': typeof ApiZenmuxRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/agent': typeof ApiAgentRoute
   '/api/ark': typeof ApiArkRoute
+  '/api/chat-stream': typeof ApiChatStreamRoute
+  '/api/speech': typeof ApiSpeechRoute
   '/api/zenmux': typeof ApiZenmuxRoute
 }
 export interface FileRoutesById {
@@ -52,20 +68,43 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/api/agent': typeof ApiAgentRoute
   '/api/ark': typeof ApiArkRoute
+  '/api/chat-stream': typeof ApiChatStreamRoute
+  '/api/speech': typeof ApiSpeechRoute
   '/api/zenmux': typeof ApiZenmuxRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/agent' | '/api/ark' | '/api/zenmux'
+  fullPaths:
+    | '/'
+    | '/api/agent'
+    | '/api/ark'
+    | '/api/chat-stream'
+    | '/api/speech'
+    | '/api/zenmux'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/agent' | '/api/ark' | '/api/zenmux'
-  id: '__root__' | '/' | '/api/agent' | '/api/ark' | '/api/zenmux'
+  to:
+    | '/'
+    | '/api/agent'
+    | '/api/ark'
+    | '/api/chat-stream'
+    | '/api/speech'
+    | '/api/zenmux'
+  id:
+    | '__root__'
+    | '/'
+    | '/api/agent'
+    | '/api/ark'
+    | '/api/chat-stream'
+    | '/api/speech'
+    | '/api/zenmux'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApiAgentRoute: typeof ApiAgentRoute
   ApiArkRoute: typeof ApiArkRoute
+  ApiChatStreamRoute: typeof ApiChatStreamRoute
+  ApiSpeechRoute: typeof ApiSpeechRoute
   ApiZenmuxRoute: typeof ApiZenmuxRoute
 }
 
@@ -92,6 +131,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiArkRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/chat-stream': {
+      id: '/api/chat-stream'
+      path: '/api/chat-stream'
+      fullPath: '/api/chat-stream'
+      preLoaderRoute: typeof ApiChatStreamRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/speech': {
+      id: '/api/speech'
+      path: '/api/speech'
+      fullPath: '/api/speech'
+      preLoaderRoute: typeof ApiSpeechRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/zenmux': {
       id: '/api/zenmux'
       path: '/api/zenmux'
@@ -106,6 +159,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApiAgentRoute: ApiAgentRoute,
   ApiArkRoute: ApiArkRoute,
+  ApiChatStreamRoute: ApiChatStreamRoute,
+  ApiSpeechRoute: ApiSpeechRoute,
   ApiZenmuxRoute: ApiZenmuxRoute,
 }
 export const routeTree = rootRouteImport

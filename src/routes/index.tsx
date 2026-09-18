@@ -17,6 +17,8 @@ import {
   type ModelOption,
   type Provider,
 } from "../lib/aurora-models";
+import { SKILLS, buildSystemPrompt } from "../lib/aurora-skills";
+import { speak, stopSpeech } from "../lib/aurora-voice";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -68,10 +70,12 @@ const IMAGE_SIZES: Record<Aspect, Record<"2K" | "4K", string>> = {
 
 const WELCOME: ChatMsg = {
   role: "a",
-  text: "Welcome to Aurora Creative Studio! Tell me what you're imagining and I'll turn it into a shootable prompt. 🎬",
+  text: "Yo Josh — Aurora here. Tell me the idea and I'll turn it into a shootable, out-the-mud visual. 🎬",
 };
 
 const STORE_KEY = "aurora_state_v2";
+
+const DEFAULT_SKILLS = ["cinematic", "content", "prompting"];
 
 interface StoredState {
   mode?: Mode;
@@ -84,6 +88,9 @@ interface StoredState {
   bg?: BgTheme;
   creations?: Creation[];
   messages?: ChatMsg[];
+  voiceOn?: boolean;
+  skills?: string[];
+  memory?: string[];
 }
 
 function ImageIcon() {
@@ -160,6 +167,11 @@ function Index() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [apiKey, setApiKey] = useState("");
   const [sessionId, setSessionId] = useState("");
+  const [voiceOn, setVoiceOn] = useState(true);
+  const [skills, setSkills] = useState<string[]>(DEFAULT_SKILLS);
+  const [memory, setMemory] = useState<string[]>([]);
+  const [memoryDraft, setMemoryDraft] = useState("");
+  const [speaking, setSpeaking] = useState(false);
   const chatBodyRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const nextId = useRef(1);
@@ -199,6 +211,9 @@ function Index() {
         if (s.videoModel) setVideoModel(s.videoModel);
         if (s.chatModel) setChatModel(s.chatModel);
         if (s.bg) setBg(s.bg);
+        if (typeof s.voiceOn === "boolean") setVoiceOn(s.voiceOn);
+        if (s.skills) setSkills(s.skills);
+        if (s.memory?.length) setMemory(s.memory);
         if (s.messages?.length) setMessages(s.messages);
         if (s.creations?.length) {
           const restored = s.creations.map((c) =>
@@ -231,6 +246,9 @@ function Index() {
         videoModel,
         chatModel,
         bg,
+        voiceOn,
+        skills,
+        memory: memory.slice(-40),
         creations: creations.slice(0, 40),
         messages: messages.slice(-60),
       };
@@ -248,6 +266,9 @@ function Index() {
     videoModel,
     chatModel,
     bg,
+    voiceOn,
+    skills,
+    memory,
     creations,
     messages,
   ]);
@@ -365,15 +386,40 @@ function Index() {
     }
   };
 
+  const sayIt = async (text: string) => {
+    if (!text.trim()) return;
+    setSpeaking(true);
+    try {
+      await speak(text.slice(0, 2000));
+    } catch {
+      // voice is optional — ignore failures
+    } finally {
+      setSpeaking(false);
+    }
+  };
+
   const handleSendChat = async () => {
     const text = chatInput.trim();
     if (!text || chatBusy) return;
+    stopSpeech();
     const history = [...messages, { role: "u" as const, text }];
     setMessages(history);
     setChatInput("");
     setChatBusy(true);
+
+    const note = text.match(/^\s*(?:remember|note)(?:\s+that)?[:,]?\s+(.{3,240})$/i)?.[1];
+    if (note) setMemory((prev) => [...prev.filter((m) => m !== note.trim()), note.trim()]);
+
+    const systemPrompt = buildSystemPrompt(skills, note ? [...memory, note.trim()] : memory);
+    const convo = [
+      { role: "system", content: systemPrompt },
+      ...history.slice(-24).map((m) => ({
+        role: m.role === "u" ? "user" : "assistant",
+        content: m.text,
+      })),
+    ];
+
     try {
-      let reply: string | undefined;
       if (chatModel === "agent") {
         const res = await fetch("/api/agent", {
           method: "POST",
@@ -385,33 +431,70 @@ function Index() {
           error?: { message?: string };
         };
         if (!res.ok) throw new Error(data.error?.message || `Request failed (${res.status})`);
-        reply = data.reply;
-      } else {
-        const data = await callApi<{ choices?: { message?: { content?: string } }[] }>(
-          modelProvider(chatModel, CHAT_MODELS),
-          {
-            kind: "chat",
-            model: chatModel,
-            messages: [
-              {
-                role: "system",
-                content:
-                  "You are Aurora Creative Director, helping musicians and creators craft cinematic image and video prompts. Be concise and vivid.",
-              },
-              ...history.slice(-20).map((m) => ({
-                role: m.role === "u" ? "user" : "assistant",
-                content: m.text,
-              })),
-            ],
-          },
-          apiKey,
-        );
-        reply = data.choices?.[0]?.message?.content;
+        const reply = data.reply?.trim() || "I didn't catch that — try again?";
+        setMessages((prev) => [...prev, { role: "a", text: reply }]);
+        setChatBusy(false);
+        if (voiceOn) void sayIt(reply);
+        return;
       }
-      setMessages((prev) => [
-        ...prev,
-        { role: "a", text: reply?.trim() || "I didn't catch that — try again?" },
-      ]);
+
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (apiKey.trim()) headers["x-ark-key"] = apiKey.trim();
+      const res = await fetch("/api/chat-stream", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          provider: modelProvider(chatModel, CHAT_MODELS),
+          model: chatModel,
+          messages: convo,
+        }),
+      });
+      if (!res.ok || !res.body) {
+        const data = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
+        throw new Error(data.error?.message || `Request failed (${res.status})`);
+      }
+
+      setMessages((prev) => [...prev, { role: "a", text: "" }]);
+      setChatBusy(false);
+      const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+      let buffered = "";
+      let full = "";
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffered += value;
+        const lines = buffered.split("\n");
+        buffered = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.startsWith("data:")) continue;
+          const payload = line.slice(5).trim();
+          if (!payload || payload === "[DONE]") continue;
+          let parsed: { choices?: { delta?: { content?: string } }[] };
+          try {
+            parsed = JSON.parse(payload) as typeof parsed;
+          } catch {
+            continue;
+          }
+          const piece = parsed.choices?.[0]?.delta?.content;
+          if (!piece) continue;
+          full += piece;
+          const snapshot = full;
+          setMessages((prev) =>
+            prev.map((m, i) => (i === prev.length - 1 && m.role === "a" ? { ...m, text: snapshot } : m)),
+          );
+        }
+      }
+      if (!full.trim()) {
+        setMessages((prev) =>
+          prev.map((m, i) =>
+            i === prev.length - 1 && m.role === "a"
+              ? { ...m, text: "I didn't catch that — try again?" }
+              : m,
+          ),
+        );
+      } else if (voiceOn) {
+        void sayIt(full);
+      }
     } catch (err) {
       setMessages((prev) => [
         ...prev,
