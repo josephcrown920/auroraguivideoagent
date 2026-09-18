@@ -18,7 +18,7 @@ import {
   type Provider,
 } from "../lib/aurora-models";
 import { SKILLS, buildSystemPrompt } from "../lib/aurora-skills";
-import { speak, stopSpeech } from "../lib/aurora-voice";
+import { primeSpeech, speak, stopSpeech } from "../lib/aurora-voice";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -155,7 +155,8 @@ function Index() {
   const [chatModel, setChatModel] = useState(CHAT_MODELS[0]!.id);
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
   const [chatMenuOpen, setChatMenuOpen] = useState(false);
-  const [refUrl, setRefUrl] = useState("");
+  const [refs, setRefs] = useState<string[]>([]);
+  const [refDraft, setRefDraft] = useState("");
   const [refOpen, setRefOpen] = useState(false);
   const [creations, setCreations] = useState<Creation[]>([]);
   const [busy, setBusy] = useState(false);
@@ -176,20 +177,38 @@ function Index() {
   const fileRef = useRef<HTMLInputElement>(null);
   const nextId = useRef(1);
 
-  const handleRefFile = async (file?: File) => {
-    if (!file) return;
-    if (file.size > 8 * 1024 * 1024) {
-      window.alert("That image is larger than 8 MB — please pick a smaller one.");
-      return;
+  const MAX_REFS = 6;
+
+  const handleRefFiles = async (files?: FileList | null) => {
+    if (!files?.length) return;
+    const picked = Array.from(files);
+    const tooBig = picked.filter((f) => f.size > 8 * 1024 * 1024);
+    if (tooBig.length) {
+      window.alert("Some images are larger than 8 MB and were skipped.");
     }
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = () => reject(new Error("Could not read that file."));
-      reader.readAsDataURL(file);
-    });
-    setRefUrl(dataUrl);
+    const usable = picked.filter((f) => f.size <= 8 * 1024 * 1024);
+    const dataUrls = await Promise.all(
+      usable.map(
+        (file) =>
+          new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result));
+            reader.onerror = () => reject(new Error("Could not read that file."));
+            reader.readAsDataURL(file);
+          }),
+      ),
+    );
+    setRefs((prev) => [...prev, ...dataUrls].slice(0, MAX_REFS));
   };
+
+  const addRefUrl = () => {
+    const url = refDraft.trim();
+    if (!url) return;
+    setRefs((prev) => (prev.includes(url) ? prev : [...prev, url].slice(0, MAX_REFS)));
+    setRefDraft("");
+  };
+
+  const removeRef = (url: string) => setRefs((prev) => prev.filter((r) => r !== url));
 
   // ---- persistent memory ----
   useEffect(() => {
@@ -310,7 +329,7 @@ function Index() {
     const currentAspect = aspect;
     const currentModel = activeModel;
     const provider = modelProvider(currentModel, modelList);
-    const reference = refUrl.trim() || undefined;
+    const references = [...refs, ...(refDraft.trim() ? [refDraft.trim()] : [])];
     setCreations((prev) => [
       {
         id,
@@ -334,7 +353,7 @@ function Index() {
             model: currentModel,
             prompt: text,
             size: IMAGE_SIZES[currentAspect][resolution],
-            imageUrl: reference,
+            imageUrls: references,
           },
           apiKey,
         );
@@ -352,7 +371,7 @@ function Index() {
             prompt: text,
             ratio: currentAspect,
             duration,
-            imageUrl: reference,
+            imageUrls: references,
           },
           apiKey,
         );
@@ -402,6 +421,8 @@ function Index() {
     const text = chatInput.trim();
     if (!text || chatBusy) return;
     stopSpeech();
+    // Unlock audio while we're still inside the user's click/keypress.
+    if (voiceOn) primeSpeech();
     const history = [...messages, { role: "u" as const, text }];
     setMessages(history);
     setChatInput("");
@@ -625,12 +646,13 @@ function Index() {
           <div className="aurora-prompt-card">
             <div className="aurora-prompt-top">
               <button
-                className={`aurora-add-btn ${refUrl.trim() ? "has-ref" : ""}`}
-                aria-label="Add reference image"
+                className={`aurora-add-btn ${refs.length ? "has-ref" : ""}`}
+                aria-label="Add reference images"
                 aria-expanded={refOpen}
                 onClick={() => setRefOpen((v) => !v)}
               >
-                {refUrl.trim() ? <img src={refUrl} alt="Reference" /> : "+"}
+                {refs[0] ? <img src={refs[0]} alt="Reference" /> : "+"}
+                {refs.length > 1 && <span className="aurora-ref-count">{refs.length}</span>}
               </button>
               <textarea
                 className="aurora-prompt-input"
@@ -652,31 +674,51 @@ function Index() {
 
             {refOpen && (
               <div className="aurora-ref-row">
-                {refUrl.trim() && <img className="aurora-ref-thumb" src={refUrl} alt="Reference" />}
+                {refs.length > 0 && (
+                  <div className="aurora-ref-strip">
+                    {refs.map((r) => (
+                      <span className="aurora-ref-chip" key={r}>
+                        <img src={r} alt="Reference" />
+                        <button
+                          aria-label="Remove reference"
+                          onClick={() => removeRef(r)}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <input
                   type="text"
-                  value={refUrl.startsWith("data:") ? "" : refUrl}
-                  onChange={(e) => setRefUrl(e.target.value)}
-                  placeholder={
-                    refUrl.startsWith("data:")
-                      ? "Uploaded image in use as style reference"
-                      : "Paste a reference image URL, or upload one"
-                  }
+                  value={refDraft}
+                  onChange={(e) => setRefDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addRefUrl();
+                    }
+                  }}
+                  placeholder={`Paste an image URL and press Enter, or upload (up to ${MAX_REFS})`}
                   aria-label="Reference image URL"
                 />
                 <input
                   ref={fileRef}
                   type="file"
                   accept="image/*"
+                  multiple
                   hidden
-                  onChange={(e) => void handleRefFile(e.target.files?.[0])}
+                  onChange={(e) => {
+                    void handleRefFiles(e.target.files);
+                    e.target.value = "";
+                  }}
                 />
                 <button className="aurora-ref-upload" onClick={() => fileRef.current?.click()}>
-                  Upload image
+                  Upload images
                 </button>
-                {refUrl.trim() && (
-                  <button className="aurora-ref-clear" onClick={() => setRefUrl("")}>
-                    Clear
+                {refs.length > 0 && (
+                  <button className="aurora-ref-clear" onClick={() => setRefs([])}>
+                    Clear all
                   </button>
                 )}
               </div>
@@ -859,6 +901,37 @@ function Index() {
               )}
             </div>
             <button
+              className={`aurora-voice-toggle ${voiceOn ? "active" : ""}`}
+              aria-pressed={voiceOn}
+              aria-label={voiceOn ? "Turn voice replies off" : "Turn voice replies on"}
+              title={voiceOn ? "Voice replies on" : "Voice replies off"}
+              onClick={() => {
+                if (voiceOn) {
+                  stopSpeech();
+                  setSpeaking(false);
+                  setVoiceOn(false);
+                } else {
+                  primeSpeech();
+                  setVoiceOn(true);
+                }
+              }}
+            >
+              {voiceOn ? "🔊" : "🔇"}
+            </button>
+            {speaking && (
+              <button
+                className="aurora-voice-toggle"
+                aria-label="Stop speaking"
+                title="Stop speaking"
+                onClick={() => {
+                  stopSpeech();
+                  setSpeaking(false);
+                }}
+              >
+                ⏹
+              </button>
+            )}
+            <button
               className="aurora-chat-close"
               aria-label="Close chat"
               onClick={() => setChatOpen(false)}
@@ -870,6 +943,19 @@ function Index() {
             {messages.map((m, i) => (
               <div className={`aurora-cm ${m.role}`} key={i}>
                 {m.text}
+                {m.role === "a" && m.text.trim() && (
+                  <button
+                    className="aurora-cm-speak"
+                    aria-label="Play this reply"
+                    title="Play this reply"
+                    onClick={() => {
+                      primeSpeech();
+                      void sayIt(m.text);
+                    }}
+                  >
+                    🔈
+                  </button>
+                )}
               </div>
             ))}
             {chatBusy && <div className="aurora-cm a aurora-typing">Thinking…</div>}
@@ -914,6 +1000,103 @@ function Index() {
                 placeholder="Optional — override the creative director session"
               />
             </div>
+            <div className="aurora-fld">
+              <label>Voice replies</label>
+              <button
+                className={`aurora-toggle-row ${voiceOn ? "on" : ""}`}
+                aria-pressed={voiceOn}
+                onClick={() => {
+                  if (voiceOn) {
+                    stopSpeech();
+                    setSpeaking(false);
+                    setVoiceOn(false);
+                  } else {
+                    primeSpeech();
+                    setVoiceOn(true);
+                  }
+                }}
+              >
+                <span>{voiceOn ? "🔊 Aurora speaks its replies" : "🔇 Voice replies are off"}</span>
+                <span className="aurora-toggle-dot" />
+              </button>
+            </div>
+
+            <div className="aurora-fld">
+              <label>Skills</label>
+              <div className="aurora-skill-list">
+                {SKILLS.map((s) => {
+                  const on = skills.includes(s.id);
+                  return (
+                    <button
+                      key={s.id}
+                      className={`aurora-skill-chip ${on ? "on" : ""}`}
+                      aria-pressed={on}
+                      onClick={() =>
+                        setSkills((prev) =>
+                          on ? prev.filter((x) => x !== s.id) : [...prev, s.id],
+                        )
+                      }
+                    >
+                      <strong>{s.label}</strong>
+                      <small>{s.blurb}</small>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="aurora-fld">
+              <label htmlFor="aurora-memory">Memory</label>
+              <div className="aurora-mem-row">
+                <input
+                  id="aurora-memory"
+                  type="text"
+                  value={memoryDraft}
+                  onChange={(e) => setMemoryDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const v = memoryDraft.trim();
+                      if (!v) return;
+                      setMemory((prev) => [...prev.filter((m) => m !== v), v]);
+                      setMemoryDraft("");
+                    }
+                  }}
+                  placeholder="Add something Aurora should always remember"
+                />
+                <button
+                  className="aurora-btn-s"
+                  onClick={() => {
+                    const v = memoryDraft.trim();
+                    if (!v) return;
+                    setMemory((prev) => [...prev.filter((m) => m !== v), v]);
+                    setMemoryDraft("");
+                  }}
+                >
+                  Add
+                </button>
+              </div>
+              {memory.length === 0 ? (
+                <p className="aurora-mem-empty">
+                  Nothing saved yet — in chat you can also say “Remember …”.
+                </p>
+              ) : (
+                <ul className="aurora-mem-list">
+                  {memory.map((m) => (
+                    <li key={m}>
+                      <span>{m}</span>
+                      <button
+                        aria-label="Forget this"
+                        onClick={() => setMemory((prev) => prev.filter((x) => x !== m))}
+                      >
+                        ×
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
             <div className="aurora-m-actions">
               <button className="aurora-btn-s" onClick={() => setSettingsOpen(false)}>
                 Cancel

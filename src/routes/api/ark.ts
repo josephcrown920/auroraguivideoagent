@@ -10,6 +10,7 @@ interface ArkBody {
   duration?: number;
   taskId?: string;
   imageUrl?: string;
+  imageUrls?: string[];
   messages?: { role: string; content: string }[];
   model?: string;
 }
@@ -59,7 +60,9 @@ export const Route = createFileRoute("/api/ark")({
             response_format: "url",
             watermark: false,
           };
-          if (body.imageUrl) payload["image"] = body.imageUrl;
+          const refs = (body.imageUrls ?? []).filter((u) => typeof u === "string" && u.trim());
+          if (refs.length > 1) payload["image"] = refs;
+          else if (refs[0] || body.imageUrl) payload["image"] = refs[0] ?? body.imageUrl;
           return arkFetch("/images/generations", key, {
             method: "POST",
             body: JSON.stringify(payload),
@@ -73,8 +76,10 @@ export const Route = createFileRoute("/api/ark")({
           const content: Record<string, unknown>[] = [
             { type: "text", text: `${body.prompt} --ratio ${ratio} --duration ${duration}` },
           ];
-          if (body.imageUrl) {
-            content.push({ type: "image_url", image_url: { url: body.imageUrl } });
+          const vrefs = (body.imageUrls ?? []).filter((u) => typeof u === "string" && u.trim());
+          const allRefs = vrefs.length ? vrefs : body.imageUrl ? [body.imageUrl] : [];
+          for (const url of allRefs) {
+            content.push({ type: "image_url", image_url: { url } });
           }
           return arkFetch("/contents/generations/tasks", key, {
             method: "POST",
