@@ -167,6 +167,11 @@ function Index() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [apiKey, setApiKey] = useState("");
   const [sessionId, setSessionId] = useState("");
+  const [voiceOn, setVoiceOn] = useState(true);
+  const [skills, setSkills] = useState<string[]>(DEFAULT_SKILLS);
+  const [memory, setMemory] = useState<string[]>([]);
+  const [memoryDraft, setMemoryDraft] = useState("");
+  const [speaking, setSpeaking] = useState(false);
   const chatBodyRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const nextId = useRef(1);
