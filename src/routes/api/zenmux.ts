@@ -10,6 +10,7 @@ interface ZmBody {
   duration?: number;
   taskId?: string;
   imageUrl?: string;
+  imageUrls?: string[];
   messages?: { role: string; content: string }[];
   model?: string;
 }
@@ -57,7 +58,9 @@ export const Route = createFileRoute("/api/zenmux")({
             prompt: body.prompt,
             size: body.size || "1024x1024",
           };
-          if (body.imageUrl) payload["image"] = body.imageUrl;
+          const refs = (body.imageUrls ?? []).filter((u) => typeof u === "string" && u.trim());
+          if (refs.length > 1) payload["image"] = refs;
+          else if (refs[0] || body.imageUrl) payload["image"] = refs[0] ?? body.imageUrl;
           return zmFetch("/images/generations", key, {
             method: "POST",
             body: JSON.stringify(payload),
@@ -67,8 +70,10 @@ export const Route = createFileRoute("/api/zenmux")({
         if (body.kind === "video") {
           if (!body.prompt) return jsonError("Missing prompt", 400);
           const content: Record<string, unknown>[] = [{ type: "text", text: body.prompt }];
-          if (body.imageUrl) {
-            content.push({ type: "image_url", image_url: { url: body.imageUrl } });
+          const vrefs = (body.imageUrls ?? []).filter((u) => typeof u === "string" && u.trim());
+          const allRefs = vrefs.length ? vrefs : body.imageUrl ? [body.imageUrl] : [];
+          for (const url of allRefs) {
+            content.push({ type: "image_url", image_url: { url } });
           }
           const payload: Record<string, unknown> = {
             model: body.model || "klingai/kling-3.0-turbo",
