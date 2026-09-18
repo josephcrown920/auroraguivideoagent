@@ -246,6 +246,9 @@ function Index() {
         videoModel,
         chatModel,
         bg,
+        voiceOn,
+        skills,
+        memory: memory.slice(-40),
         creations: creations.slice(0, 40),
         messages: messages.slice(-60),
       };
@@ -263,6 +266,9 @@ function Index() {
     videoModel,
     chatModel,
     bg,
+    voiceOn,
+    skills,
+    memory,
     creations,
     messages,
   ]);
