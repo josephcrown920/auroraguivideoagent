@@ -899,6 +899,37 @@ function Index() {
               )}
             </div>
             <button
+              className={`aurora-voice-toggle ${voiceOn ? "active" : ""}`}
+              aria-pressed={voiceOn}
+              aria-label={voiceOn ? "Turn voice replies off" : "Turn voice replies on"}
+              title={voiceOn ? "Voice replies on" : "Voice replies off"}
+              onClick={() => {
+                if (voiceOn) {
+                  stopSpeech();
+                  setSpeaking(false);
+                  setVoiceOn(false);
+                } else {
+                  primeSpeech();
+                  setVoiceOn(true);
+                }
+              }}
+            >
+              {voiceOn ? "🔊" : "🔇"}
+            </button>
+            {speaking && (
+              <button
+                className="aurora-voice-toggle"
+                aria-label="Stop speaking"
+                title="Stop speaking"
+                onClick={() => {
+                  stopSpeech();
+                  setSpeaking(false);
+                }}
+              >
+                ⏹
+              </button>
+            )}
+            <button
               className="aurora-chat-close"
               aria-label="Close chat"
               onClick={() => setChatOpen(false)}
@@ -910,6 +941,19 @@ function Index() {
             {messages.map((m, i) => (
               <div className={`aurora-cm ${m.role}`} key={i}>
                 {m.text}
+                {m.role === "a" && m.text.trim() && (
+                  <button
+                    className="aurora-cm-speak"
+                    aria-label="Play this reply"
+                    title="Play this reply"
+                    onClick={() => {
+                      primeSpeech();
+                      void sayIt(m.text);
+                    }}
+                  >
+                    🔈
+                  </button>
+                )}
               </div>
             ))}
             {chatBusy && <div className="aurora-cm a aurora-typing">Thinking…</div>}
