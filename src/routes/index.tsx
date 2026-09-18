@@ -211,6 +211,9 @@ function Index() {
         if (s.videoModel) setVideoModel(s.videoModel);
         if (s.chatModel) setChatModel(s.chatModel);
         if (s.bg) setBg(s.bg);
+        if (typeof s.voiceOn === "boolean") setVoiceOn(s.voiceOn);
+        if (s.skills) setSkills(s.skills);
+        if (s.memory?.length) setMemory(s.memory);
         if (s.messages?.length) setMessages(s.messages);
         if (s.creations?.length) {
           const restored = s.creations.map((c) =>
