@@ -10,3 +10,7 @@
 - [x] Wire Generate to ARK image + video generation via /api/ark proxy, results in gallery
 - [x] Real ARK-powered creative-director chat panel
 - [x] Export project zip to Files
+
+- [x] Add multiple reference selection and removal
+- [x] Add voice, skills, and memory controls
+- [ ] Verify playback and multi-reference controls

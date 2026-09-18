@@ -173,6 +173,7 @@ function Index() {
   const [memory, setMemory] = useState<string[]>([]);
   const [memoryDraft, setMemoryDraft] = useState("");
   const [speaking, setSpeaking] = useState(false);
+  const [voiceError, setVoiceError] = useState("");
   const chatBodyRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const nextId = useRef(1);
@@ -407,11 +408,12 @@ function Index() {
 
   const sayIt = async (text: string) => {
     if (!text.trim()) return;
+    setVoiceError("");
     setSpeaking(true);
     try {
-      await speak(text.slice(0, 2000));
-    } catch {
-      // voice is optional — ignore failures
+      await speak(text);
+    } catch (error) {
+      setVoiceError(error instanceof Error ? error.message : "Voice playback failed.");
     } finally {
       setSpeaking(false);
     }
@@ -476,7 +478,6 @@ function Index() {
       }
 
       setMessages((prev) => [...prev, { role: "a", text: "" }]);
-      setChatBusy(false);
       const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
       let buffered = "";
       let full = "";
@@ -960,6 +961,7 @@ function Index() {
             ))}
             {chatBusy && <div className="aurora-cm a aurora-typing">Thinking…</div>}
           </div>
+          {voiceError && <p role="alert" className="aurora-voice-error">{voiceError}</p>}
           <div className="aurora-chat-input-row">
             <input
               placeholder="Ask for a creative direction…"
