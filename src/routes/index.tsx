@@ -18,7 +18,7 @@ import {
   type Provider,
 } from "../lib/aurora-models";
 import { SKILLS, buildSystemPrompt } from "../lib/aurora-skills";
-import { speak, stopSpeech } from "../lib/aurora-voice";
+import { primeSpeech, speak, stopSpeech } from "../lib/aurora-voice";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -155,7 +155,8 @@ function Index() {
   const [chatModel, setChatModel] = useState(CHAT_MODELS[0]!.id);
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
   const [chatMenuOpen, setChatMenuOpen] = useState(false);
-  const [refUrl, setRefUrl] = useState("");
+  const [refs, setRefs] = useState<string[]>([]);
+  const [refDraft, setRefDraft] = useState("");
   const [refOpen, setRefOpen] = useState(false);
   const [creations, setCreations] = useState<Creation[]>([]);
   const [busy, setBusy] = useState(false);
