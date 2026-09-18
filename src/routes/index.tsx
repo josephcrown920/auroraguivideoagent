@@ -177,20 +177,38 @@ function Index() {
   const fileRef = useRef<HTMLInputElement>(null);
   const nextId = useRef(1);
 
-  const handleRefFile = async (file?: File) => {
-    if (!file) return;
-    if (file.size > 8 * 1024 * 1024) {
-      window.alert("That image is larger than 8 MB — please pick a smaller one.");
-      return;
+  const MAX_REFS = 6;
+
+  const handleRefFiles = async (files?: FileList | null) => {
+    if (!files?.length) return;
+    const picked = Array.from(files);
+    const tooBig = picked.filter((f) => f.size > 8 * 1024 * 1024);
+    if (tooBig.length) {
+      window.alert("Some images are larger than 8 MB and were skipped.");
     }
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = () => reject(new Error("Could not read that file."));
-      reader.readAsDataURL(file);
-    });
-    setRefUrl(dataUrl);
+    const usable = picked.filter((f) => f.size <= 8 * 1024 * 1024);
+    const dataUrls = await Promise.all(
+      usable.map(
+        (file) =>
+          new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result));
+            reader.onerror = () => reject(new Error("Could not read that file."));
+            reader.readAsDataURL(file);
+          }),
+      ),
+    );
+    setRefs((prev) => [...prev, ...dataUrls].slice(0, MAX_REFS));
   };
+
+  const addRefUrl = () => {
+    const url = refDraft.trim();
+    if (!url) return;
+    setRefs((prev) => (prev.includes(url) ? prev : [...prev, url].slice(0, MAX_REFS)));
+    setRefDraft("");
+  };
+
+  const removeRef = (url: string) => setRefs((prev) => prev.filter((r) => r !== url));
 
   // ---- persistent memory ----
   useEffect(() => {
