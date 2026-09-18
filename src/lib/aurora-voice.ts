@@ -1,7 +1,44 @@
 // Streaming voice playback: reads PCM audio chunks from /api/speech (SSE)
-// and schedules them on a Web Audio context so playback starts immediately.
+// and schedules them on a shared Web Audio context so playback starts immediately.
+//
+// The context is created/unlocked from a real user gesture via primeSpeech();
+// creating it later (inside an async reply handler) leaves it suspended in
+// sandboxed preview iframes and nothing is ever heard.
 
 let activeController: AbortController | null = null;
+let sharedCtx: AudioContext | null = null;
+
+type Ctor = typeof AudioContext;
+
+function getCtor(): Ctor | null {
+  if (typeof window === "undefined") return null;
+  const w = window as unknown as { AudioContext?: Ctor; webkitAudioContext?: Ctor };
+  return w.AudioContext ?? w.webkitAudioContext ?? null;
+}
+
+/** Call from a click/keydown handler so audio is allowed to play later. */
+export function primeSpeech(): void {
+  const Ctor = getCtor();
+  if (!Ctor) return;
+  if (!sharedCtx || sharedCtx.state === "closed") {
+    try {
+      sharedCtx = new Ctor({ sampleRate: 24000 });
+    } catch {
+      sharedCtx = null;
+      return;
+    }
+  }
+  if (sharedCtx.state === "suspended") void sharedCtx.resume().catch(() => {});
+  // A silent tick fully unlocks playback on iOS/Safari.
+  try {
+    const src = sharedCtx.createBufferSource();
+    src.buffer = sharedCtx.createBuffer(1, 1, 24000);
+    src.connect(sharedCtx.destination);
+    src.start(0);
+  } catch {
+    // ignore
+  }
+}
 
 export function stopSpeech() {
   activeController?.abort();
@@ -13,7 +50,9 @@ export async function speak(text: string, voice = "Kore"): Promise<void> {
   const controller = new AbortController();
   activeController = controller;
 
-  const ctx = new AudioContext({ sampleRate: 24000 });
+  primeSpeech();
+  const ctx = sharedCtx;
+  if (!ctx) throw new Error("Audio is not available in this browser.");
   if (ctx.state === "suspended") await ctx.resume().catch(() => {});
 
   let playhead = 0;
@@ -33,7 +72,7 @@ export async function speak(text: string, voice = "Kore"): Promise<void> {
     const source = ctx.createBufferSource();
     source.buffer = buffer;
     source.connect(ctx.destination);
-    if (playhead === 0) playhead = ctx.currentTime + 0.05;
+    if (playhead === 0) playhead = ctx.currentTime + 0.12;
     else playhead = Math.max(playhead, ctx.currentTime);
     source.start(playhead);
     playhead += buffer.duration;
@@ -76,11 +115,12 @@ export async function speak(text: string, voice = "Kore"): Promise<void> {
         playChunk(chunk);
       }
     }
+    // Let the queued audio finish before resolving so "speaking" state is honest.
+    const remaining = Math.max(0, playhead - ctx.currentTime) * 1000;
+    if (remaining > 0) await new Promise((r) => setTimeout(r, remaining));
   } catch (err) {
     if ((err as Error)?.name !== "AbortError") throw err;
   } finally {
     if (activeController === controller) activeController = null;
-    const tail = Math.max(0, playhead - ctx.currentTime) * 1000 + 400;
-    setTimeout(() => void ctx.close().catch(() => {}), tail);
   }
 }
