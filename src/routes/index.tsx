@@ -329,7 +329,7 @@ function Index() {
     const currentAspect = aspect;
     const currentModel = activeModel;
     const provider = modelProvider(currentModel, modelList);
-    const reference = refUrl.trim() || undefined;
+    const references = [...refs, ...(refDraft.trim() ? [refDraft.trim()] : [])];
     setCreations((prev) => [
       {
         id,
@@ -353,7 +353,7 @@ function Index() {
             model: currentModel,
             prompt: text,
             size: IMAGE_SIZES[currentAspect][resolution],
-            imageUrl: reference,
+            imageUrls: references,
           },
           apiKey,
         );
@@ -371,7 +371,7 @@ function Index() {
             prompt: text,
             ratio: currentAspect,
             duration,
-            imageUrl: reference,
+            imageUrls: references,
           },
           apiKey,
         );
