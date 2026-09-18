@@ -977,3 +977,29 @@
 }
 
 .aurora-gallery-hd h2 { margin-bottom: 0; }
+
+/* Studio reference and voice controls */
+.aurora-body { --studio-glass: #ffffff14; --studio-line: #ffffff30; --studio-ink: #fff; --studio-active: #d4a84b; }
+.aurora-ref-strip { display:flex; flex-wrap:wrap; gap:10px; width:100%; }
+.aurora-ref-chip { position:relative; display:block; width:64px; height:64px; }
+.aurora-ref-chip img { width:100%; height:100%; object-fit:cover; border-radius:8px; }
+.aurora-ref-chip button { position:absolute; right:0; top:0; }
+.aurora-add-btn { position:relative; }
+.aurora-ref-count { position:absolute; bottom:0; right:0; background:var(--studio-active); color:var(--studio-ink); padding:2px 5px; font-size:11px; }
+.aurora-voice-toggle,.aurora-cm-speak,.aurora-ref-chip button,.aurora-mem-list button { background:var(--studio-glass); color:var(--studio-ink); border:1px solid var(--studio-line); border-radius:8px; cursor:pointer; min-width:32px; min-height:32px; flex-shrink:0; }
+.aurora-voice-toggle.active { border-color:var(--studio-active); }
+.aurora-cm-speak { display:block; margin-top:8px; }
+.aurora-toggle-row,.aurora-skill-chip { background:var(--studio-glass); color:var(--studio-ink); border:1px solid var(--studio-line); border-radius:8px; cursor:pointer; padding:12px; text-align:left; }
+.aurora-toggle-row { width:100%; }
+.aurora-skill-list { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.aurora-skill-chip small { display:block; margin-top:5px; opacity:.7; }
+.aurora-skill-chip.on,.aurora-toggle-row.on { border-color:var(--studio-active); }
+.aurora-mem-row { display:flex; gap:8px; }
+.aurora-mem-row input { min-width:0; }
+.aurora-mem-list { padding:0; list-style:none; }
+.aurora-mem-list li { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:8px; overflow-wrap:anywhere; }
+.aurora-mem-empty { font-size:12px; opacity:.65; }
+.aurora-modal-box { max-height:85dvh; overflow-y:auto; }
+.aurora-chat-hd .aurora-model-wrap { min-width:0; flex:1; }
+.aurora-chat-model { max-width:100%; overflow-wrap:anywhere; }
+.aurora-voice-error { padding:8px 16px; font-size:12px; }
