@@ -1000,6 +1000,103 @@ function Index() {
                 placeholder="Optional — override the creative director session"
               />
             </div>
+            <div className="aurora-fld">
+              <label>Voice replies</label>
+              <button
+                className={`aurora-toggle-row ${voiceOn ? "on" : ""}`}
+                aria-pressed={voiceOn}
+                onClick={() => {
+                  if (voiceOn) {
+                    stopSpeech();
+                    setSpeaking(false);
+                    setVoiceOn(false);
+                  } else {
+                    primeSpeech();
+                    setVoiceOn(true);
+                  }
+                }}
+              >
+                <span>{voiceOn ? "🔊 Aurora speaks its replies" : "🔇 Voice replies are off"}</span>
+                <span className="aurora-toggle-dot" />
+              </button>
+            </div>
+
+            <div className="aurora-fld">
+              <label>Skills</label>
+              <div className="aurora-skill-list">
+                {SKILLS.map((s) => {
+                  const on = skills.includes(s.id);
+                  return (
+                    <button
+                      key={s.id}
+                      className={`aurora-skill-chip ${on ? "on" : ""}`}
+                      aria-pressed={on}
+                      onClick={() =>
+                        setSkills((prev) =>
+                          on ? prev.filter((x) => x !== s.id) : [...prev, s.id],
+                        )
+                      }
+                    >
+                      <strong>{s.label}</strong>
+                      <small>{s.blurb}</small>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="aurora-fld">
+              <label htmlFor="aurora-memory">Memory</label>
+              <div className="aurora-mem-row">
+                <input
+                  id="aurora-memory"
+                  type="text"
+                  value={memoryDraft}
+                  onChange={(e) => setMemoryDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const v = memoryDraft.trim();
+                      if (!v) return;
+                      setMemory((prev) => [...prev.filter((m) => m !== v), v]);
+                      setMemoryDraft("");
+                    }
+                  }}
+                  placeholder="Add something Aurora should always remember"
+                />
+                <button
+                  className="aurora-btn-s"
+                  onClick={() => {
+                    const v = memoryDraft.trim();
+                    if (!v) return;
+                    setMemory((prev) => [...prev.filter((m) => m !== v), v]);
+                    setMemoryDraft("");
+                  }}
+                >
+                  Add
+                </button>
+              </div>
+              {memory.length === 0 ? (
+                <p className="aurora-mem-empty">
+                  Nothing saved yet — in chat you can also say “Remember …”.
+                </p>
+              ) : (
+                <ul className="aurora-mem-list">
+                  {memory.map((m) => (
+                    <li key={m}>
+                      <span>{m}</span>
+                      <button
+                        aria-label="Forget this"
+                        onClick={() => setMemory((prev) => prev.filter((x) => x !== m))}
+                      >
+                        ×
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
             <div className="aurora-m-actions">
               <button className="aurora-btn-s" onClick={() => setSettingsOpen(false)}>
                 Cancel
