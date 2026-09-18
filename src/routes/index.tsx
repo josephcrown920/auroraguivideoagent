@@ -17,6 +17,8 @@ import {
   type ModelOption,
   type Provider,
 } from "../lib/aurora-models";
+import { SKILLS, buildSystemPrompt } from "../lib/aurora-skills";
+import { speak, stopSpeech } from "../lib/aurora-voice";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -68,10 +70,12 @@ const IMAGE_SIZES: Record<Aspect, Record<"2K" | "4K", string>> = {
 
 const WELCOME: ChatMsg = {
   role: "a",
-  text: "Welcome to Aurora Creative Studio! Tell me what you're imagining and I'll turn it into a shootable prompt. 🎬",
+  text: "Yo Josh — Aurora here. Tell me the idea and I'll turn it into a shootable, out-the-mud visual. 🎬",
 };
 
 const STORE_KEY = "aurora_state_v2";
+
+const DEFAULT_SKILLS = ["cinematic", "content", "prompting"];
 
 interface StoredState {
   mode?: Mode;
@@ -84,6 +88,9 @@ interface StoredState {
   bg?: BgTheme;
   creations?: Creation[];
   messages?: ChatMsg[];
+  voiceOn?: boolean;
+  skills?: string[];
+  memory?: string[];
 }
 
 function ImageIcon() {
