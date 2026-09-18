@@ -13,4 +13,5 @@
 
 - [x] Add multiple reference selection and removal
 - [x] Add voice, skills, and memory controls
-- [ ] Verify playback and multi-reference controls
+- [x] Verify two-image upload, four skill controls, and real voice audio response
+- [ ] Verify audible playback on the user’s device (requires user confirmation)
