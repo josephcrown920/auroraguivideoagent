@@ -421,6 +421,8 @@ function Index() {
     const text = chatInput.trim();
     if (!text || chatBusy) return;
     stopSpeech();
+    // Unlock audio while we're still inside the user's click/keypress.
+    if (voiceOn) primeSpeech();
     const history = [...messages, { role: "u" as const, text }];
     setMessages(history);
     setChatInput("");
