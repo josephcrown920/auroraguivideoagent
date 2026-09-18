@@ -644,12 +644,13 @@ function Index() {
           <div className="aurora-prompt-card">
             <div className="aurora-prompt-top">
               <button
-                className={`aurora-add-btn ${refUrl.trim() ? "has-ref" : ""}`}
-                aria-label="Add reference image"
+                className={`aurora-add-btn ${refs.length ? "has-ref" : ""}`}
+                aria-label="Add reference images"
                 aria-expanded={refOpen}
                 onClick={() => setRefOpen((v) => !v)}
               >
-                {refUrl.trim() ? <img src={refUrl} alt="Reference" /> : "+"}
+                {refs[0] ? <img src={refs[0]} alt="Reference" /> : "+"}
+                {refs.length > 1 && <span className="aurora-ref-count">{refs.length}</span>}
               </button>
               <textarea
                 className="aurora-prompt-input"
@@ -671,31 +672,51 @@ function Index() {
 
             {refOpen && (
               <div className="aurora-ref-row">
-                {refUrl.trim() && <img className="aurora-ref-thumb" src={refUrl} alt="Reference" />}
+                {refs.length > 0 && (
+                  <div className="aurora-ref-strip">
+                    {refs.map((r) => (
+                      <span className="aurora-ref-chip" key={r}>
+                        <img src={r} alt="Reference" />
+                        <button
+                          aria-label="Remove reference"
+                          onClick={() => removeRef(r)}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <input
                   type="text"
-                  value={refUrl.startsWith("data:") ? "" : refUrl}
-                  onChange={(e) => setRefUrl(e.target.value)}
-                  placeholder={
-                    refUrl.startsWith("data:")
-                      ? "Uploaded image in use as style reference"
-                      : "Paste a reference image URL, or upload one"
-                  }
+                  value={refDraft}
+                  onChange={(e) => setRefDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addRefUrl();
+                    }
+                  }}
+                  placeholder={`Paste an image URL and press Enter, or upload (up to ${MAX_REFS})`}
                   aria-label="Reference image URL"
                 />
                 <input
                   ref={fileRef}
                   type="file"
                   accept="image/*"
+                  multiple
                   hidden
-                  onChange={(e) => void handleRefFile(e.target.files?.[0])}
+                  onChange={(e) => {
+                    void handleRefFiles(e.target.files);
+                    e.target.value = "";
+                  }}
                 />
                 <button className="aurora-ref-upload" onClick={() => fileRef.current?.click()}>
-                  Upload image
+                  Upload images
                 </button>
-                {refUrl.trim() && (
-                  <button className="aurora-ref-clear" onClick={() => setRefUrl("")}>
-                    Clear
+                {refs.length > 0 && (
+                  <button className="aurora-ref-clear" onClick={() => setRefs([])}>
+                    Clear all
                   </button>
                 )}
               </div>
