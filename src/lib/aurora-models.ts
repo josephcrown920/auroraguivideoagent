@@ -343,7 +343,7 @@ export const DIRECTOR_MODELS: ModelOption[] = [
     label: "Qwen 3.8 Flash",
     vendor: "Alibaba",
     provider: "zenmux",
-    note: "ZenMux",
+    note: "ZenMux · needs balance",
   },
   {
     id: "deepseek-r1-distill-qwen-32b-250120",
