@@ -8,8 +8,10 @@ import bg4 from "../assets/aurora-bg-4.jpg";
 import bg5 from "../assets/aurora-bg-5.jpg";
 import moonAsset from "../assets/aurora-moon.jpg.asset.json";
 import chromeAsset from "../assets/aurora-chrome.jpg.asset.json";
+import courtBg from "../assets/aurora-court.jpg";
 import {
   CHAT_MODELS,
+  DIRECTOR_MODELS,
   IMAGE_MODELS,
   VIDEO_MODELS,
   modelLabel,
@@ -44,7 +46,7 @@ export const Route = createFileRoute("/")({
 
 type Mode = "image" | "video";
 type Aspect = "1:1" | "16:9" | "9:16";
-type BgTheme = "moon" | "chrome" | "collage";
+type BgTheme = "moon" | "chrome" | "collage" | "court";
 
 interface Creation {
   id: number;
@@ -86,6 +88,7 @@ interface StoredState {
   videoModel?: string;
   chatModel?: string;
   bg?: BgTheme;
+  dirModel?: string;
   creations?: Creation[];
   messages?: ChatMsg[];
   voiceOn?: boolean;
@@ -174,6 +177,12 @@ function Index() {
   const [memoryDraft, setMemoryDraft] = useState("");
   const [speaking, setSpeaking] = useState(false);
   const [voiceError, setVoiceError] = useState("");
+  const [dirModel, setDirModel] = useState(DIRECTOR_MODELS[0]!.id);
+  const [dirMenuOpen, setDirMenuOpen] = useState(false);
+  const [dirInput, setDirInput] = useState("");
+  const [dirOut, setDirOut] = useState("");
+  const [dirBusy, setDirBusy] = useState(false);
+  const [dirError, setDirError] = useState("");
   const chatBodyRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const nextId = useRef(1);
@@ -231,6 +240,7 @@ function Index() {
         if (s.videoModel) setVideoModel(s.videoModel);
         if (s.chatModel) setChatModel(s.chatModel);
         if (s.bg) setBg(s.bg);
+        if (s.dirModel) setDirModel(s.dirModel);
         if (typeof s.voiceOn === "boolean") setVoiceOn(s.voiceOn);
         if (s.skills) setSkills(s.skills);
         if (s.memory?.length) setMemory(s.memory);
@@ -246,7 +256,13 @@ function Index() {
         }
       } else {
         const legacyBg = localStorage.getItem("aurora_bg");
-        if (legacyBg === "moon" || legacyBg === "chrome" || legacyBg === "collage") setBg(legacyBg);
+        if (
+          legacyBg === "moon" ||
+          legacyBg === "chrome" ||
+          legacyBg === "collage" ||
+          legacyBg === "court"
+        )
+          setBg(legacyBg);
       }
     } catch {
       // ignore
@@ -266,6 +282,7 @@ function Index() {
         videoModel,
         chatModel,
         bg,
+        dirModel,
         voiceOn,
         skills,
         memory: memory.slice(-40),
@@ -286,6 +303,7 @@ function Index() {
     videoModel,
     chatModel,
     bg,
+    dirModel,
     voiceOn,
     skills,
     memory,
@@ -298,16 +316,17 @@ function Index() {
   }, [messages, chatOpen, chatBusy]);
 
   useEffect(() => {
-    if (!modelMenuOpen && !chatMenuOpen) return;
+    if (!modelMenuOpen && !chatMenuOpen && !dirMenuOpen) return;
     const onDown = (e: MouseEvent) => {
       if (!(e.target as HTMLElement).closest(".aurora-model-wrap")) {
         setModelMenuOpen(false);
         setChatMenuOpen(false);
+        setDirMenuOpen(false);
       }
     };
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
-  }, [modelMenuOpen, chatMenuOpen]);
+  }, [modelMenuOpen, chatMenuOpen, dirMenuOpen]);
 
   const modelList: ModelOption[] = mode === "image" ? IMAGE_MODELS : VIDEO_MODELS;
   const activeModel = mode === "image" ? imageModel : videoModel;
@@ -322,27 +341,28 @@ function Index() {
     setModelMenuOpen(false);
   };
 
-  const handleGenerate = async () => {
-    const text = prompt.trim();
+  const handleGenerate = async (override?: { text?: string; mode?: Mode }) => {
+    const text = (override?.text ?? prompt).trim();
     if (!text || busy) return;
     const id = nextId.current++;
-    const currentMode = mode;
+    const currentMode = override?.mode ?? mode;
     const currentAspect = aspect;
-    const currentModel = activeModel;
-    const provider = modelProvider(currentModel, modelList);
+    const currentList = currentMode === "image" ? IMAGE_MODELS : VIDEO_MODELS;
+    const currentModel = currentMode === "image" ? imageModel : videoModel;
+    const provider = modelProvider(currentModel, currentList);
     const references = [...refs, ...(refDraft.trim() ? [refDraft.trim()] : [])];
     setCreations((prev) => [
       {
         id,
         prompt: text,
-        model: modelLabel(currentModel, modelList),
+        model: modelLabel(currentModel, currentList),
         kind: currentMode,
         aspect: currentAspect,
         status: "pending",
       },
       ...prev,
     ]);
-    setPrompt("");
+    if (!override?.text) setPrompt("");
     setBusy(true);
 
     try {
