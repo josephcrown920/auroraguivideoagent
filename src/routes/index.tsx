@@ -426,6 +426,86 @@ function Index() {
     }
   };
 
+  const streamChat = async (
+    model: string,
+    convo: { role: string; content: string }[],
+    onDelta: (full: string) => void,
+  ): Promise<string> => {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (apiKey.trim()) headers["x-ark-key"] = apiKey.trim();
+    const res = await fetch("/api/chat-stream", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        provider: modelProvider(model, DIRECTOR_MODELS),
+        model,
+        messages: convo,
+      }),
+    });
+    if (!res.ok || !res.body) {
+      const data = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
+      throw new Error(data.error?.message || `Request failed (${res.status})`);
+    }
+    const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+    let buffered = "";
+    let full = "";
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffered += value;
+      const lines = buffered.split("\n");
+      buffered = lines.pop() ?? "";
+      for (const line of lines) {
+        if (!line.startsWith("data:")) continue;
+        const payload = line.slice(5).trim();
+        if (!payload || payload === "[DONE]") continue;
+        let parsed: { choices?: { delta?: { content?: string } }[] };
+        try {
+          parsed = JSON.parse(payload) as typeof parsed;
+        } catch {
+          continue;
+        }
+        const piece = parsed.choices?.[0]?.delta?.content;
+        if (!piece) continue;
+        full += piece;
+        onDelta(full);
+      }
+    }
+    return full.trim();
+  };
+
+  const runDirector = async (action: "treat" | "film") => {
+    const idea = dirInput.trim();
+    if (!idea || dirBusy || busy) return;
+    setDirError("");
+    setDirOut("");
+    setDirBusy(true);
+    const task =
+      action === "film"
+        ? "Turn the idea below into ONE cinematic video generation prompt. Reply with the prompt only — a single paragraph under 70 words, naming shot, camera move, lighting, wardrobe and mood. No titles, no lists, no commentary."
+        : "Give a tight shootable treatment for the idea below: logline, 3-4 shots with camera moves, lighting and wardrobe notes, and one rollout angle. Keep it under 180 words.";
+    try {
+      const out = await streamChat(
+        dirModel,
+        [
+          { role: "system", content: `${buildSystemPrompt(skills, memory)}\n\n${task}` },
+          { role: "user", content: idea },
+        ],
+        setDirOut,
+      );
+      if (!out) throw new Error("The director didn't reply — try again.");
+      if (action === "film") {
+        setMode("video");
+        setPrompt(out);
+        await handleGenerate({ text: out, mode: "video" });
+      }
+    } catch (err) {
+      setDirError(err instanceof Error ? err.message : "The director is unavailable.");
+    } finally {
+      setDirBusy(false);
+    }
+  };
+
   const sayIt = async (text: string) => {
     if (!text.trim()) return;
     setVoiceError("");
