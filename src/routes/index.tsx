@@ -652,7 +652,8 @@ function Index() {
     [bg3, bg1],
   ];
 
-  const singleBg = bg === "moon" ? moonAsset.url : chromeAsset.url;
+  const singleBg =
+    bg === "moon" ? moonAsset.url : bg === "court" ? courtBg : chromeAsset.url;
 
   return (
     <div className="aurora-body">
@@ -686,14 +687,20 @@ function Index() {
         <div className="aurora-logo-mark">A</div>
         Aurora
         <div className="aurora-bg-switch" role="group" aria-label="Background">
-          {(["moon", "chrome", "collage"] as BgTheme[]).map((t) => (
+          {(["court", "moon", "chrome", "collage"] as BgTheme[]).map((t) => (
             <button
               key={t}
               className={`aurora-bg-btn ${bg === t ? "active" : ""}`}
               onClick={() => setBg(t)}
               aria-pressed={bg === t}
             >
-              {t === "moon" ? "Moon" : t === "chrome" ? "Chrome" : "Collage"}
+              {t === "court"
+                ? "Court"
+                : t === "moon"
+                  ? "Moon"
+                  : t === "chrome"
+                    ? "Chrome"
+                    : "Collage"}
             </button>
           ))}
         </div>
@@ -742,6 +749,85 @@ function Index() {
               <VideoIcon />
               Video
             </button>
+          </div>
+
+          <div className="aurora-director">
+            <div className="aurora-dir-hd">
+              <span className="aurora-dir-title">🎥 Creative Director</span>
+              <div className="aurora-model-wrap">
+                <button
+                  className="aurora-dir-model"
+                  onClick={() => setDirMenuOpen((v) => !v)}
+                  aria-expanded={dirMenuOpen}
+                >
+                  {modelLabel(dirModel, DIRECTOR_MODELS)} <span className="chev">▼</span>
+                </button>
+                {dirMenuOpen && (
+                  <div className="aurora-menu" role="listbox">
+                    {DIRECTOR_MODELS.map((m) => (
+                      <button
+                        key={m.id}
+                        className={`aurora-menu-item ${m.id === dirModel ? "active" : ""}`}
+                        onClick={() => {
+                          setDirModel(m.id);
+                          setDirMenuOpen(false);
+                        }}
+                        role="option"
+                        aria-selected={m.id === dirModel}
+                      >
+                        <span>{m.label}</span>
+                        <small>{m.note ?? m.vendor}</small>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            <textarea
+              className="aurora-dir-input"
+              placeholder="Describe a scene — “courtside tunnel walk, chrome chains, rain outside” — and film it"
+              value={dirInput}
+              onChange={(e) => setDirInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  void runDirector("film");
+                }
+              }}
+            />
+            <div className="aurora-dir-actions">
+              <button
+                className="aurora-btn-p"
+                disabled={!dirInput.trim() || dirBusy || busy}
+                onClick={() => void runDirector("film")}
+              >
+                {dirBusy || busy ? "Filming…" : "Film this scene"}
+              </button>
+              <button
+                className="aurora-btn-s"
+                disabled={!dirInput.trim() || dirBusy}
+                onClick={() => void runDirector("treat")}
+              >
+                Treatment
+              </button>
+              {dirOut.trim() && !dirBusy && (
+                <button
+                  className="aurora-btn-s"
+                  onClick={() => {
+                    setPrompt(dirOut.trim());
+                    setDirOut("");
+                  }}
+                >
+                  Use as prompt
+                </button>
+              )}
+            </div>
+            {dirError && (
+              <p role="alert" className="aurora-voice-error">
+                {dirError}
+              </p>
+            )}
+            {dirOut && <div className="aurora-dir-out">{dirOut}</div>}
           </div>
 
           <div className="aurora-prompt-card">
