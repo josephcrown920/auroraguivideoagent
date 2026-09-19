@@ -328,3 +328,30 @@ export function modelLabel(id: string, list: ModelOption[]): string {
 export function modelProvider(id: string, list: ModelOption[]): Provider {
   return list.find((m) => m.id === id)?.provider ?? "ark";
 }
+
+/** Compact LLM picker shown in the inline Creative Director strip. */
+export const DIRECTOR_MODELS: ModelOption[] = [
+  {
+    id: "dola-seed-2-1-turbo-260628",
+    label: "Dola Seed 2.1 Turbo",
+    vendor: "ByteDance",
+    provider: "ark",
+    note: "Fast director",
+  },
+  {
+    id: "qwen/qwen3.8-flash",
+    label: "Qwen 3.8 Flash",
+    vendor: "Alibaba",
+    provider: "zenmux",
+    note: "ZenMux · needs balance",
+  },
+  {
+    id: "deepseek-r1-distill-qwen-32b-250120",
+    label: "Qwen 32B (R1 distill)",
+    vendor: "Alibaba",
+    provider: "ark",
+    note: "Deep thinker",
+  },
+  { id: "glm-5-3-flash-260828", label: "GLM 5.3 Flash", vendor: "Z.AI", provider: "ark" },
+  { id: "seed-2-0-pro-260328", label: "Seed 2.0 Pro", vendor: "ByteDance", provider: "ark" },
+];
