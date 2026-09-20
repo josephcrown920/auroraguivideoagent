@@ -1123,3 +1123,13 @@
   color: rgba(255,255,255,0.62);
   font-size: 11px;
 }
+
+
+.aurora-layers-panel{margin:18px auto;max-width:980px;padding:16px;border:1px solid rgba(255,255,255,.12);border-radius:18px;background:rgba(10,10,18,.58);backdrop-filter:blur(18px)}
+.aurora-layers-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:12px}
+.aurora-layers-head strong{display:block;font-size:14px}.aurora-layers-head small{display:block;margin-top:4px;opacity:.62;font-size:11px}.aurora-layers-head span{min-width:28px;padding:4px 8px;border-radius:999px;background:rgba(140,120,255,.16);text-align:center;font-size:11px}
+.aurora-layer-adds{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:10px}
+.aurora-layer-adds button,.aurora-layer-row button,.aurora-layer-order button{border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:inherit;border-radius:9px;padding:7px;display:flex;align-items:center;justify-content:center;gap:5px;font-size:10px}
+.aurora-layer-adds svg{width:14px;height:14px}.aurora-layer-body{display:grid;grid-template-columns:1.5fr 1fr;gap:10px}.aurora-layer-list{max-height:190px;overflow:auto}
+.aurora-layer-row{display:grid;grid-template-columns:14px 16px 1fr repeat(3,26px);align-items:center;gap:5px;padding:8px;border:1px solid transparent;border-radius:9px;font-size:11px;cursor:pointer}.aurora-layer-row.active{border-color:rgba(140,120,255,.5);background:rgba(140,120,255,.08)}.aurora-layer-row svg{width:13px;height:13px;opacity:.7}.aurora-layer-row button{padding:4px;border:0;background:transparent}.aurora-layer-inspector{border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:10px;display:grid;gap:8px}.aurora-layer-inspector input[type=text],.aurora-layer-inspector>input{width:100%;box-sizing:border-box;border:1px solid rgba(255,255,255,.1);background:rgba(0,0,0,.2);color:inherit;border-radius:7px;padding:7px;font-size:11px}.aurora-layer-inspector label{display:grid;grid-template-columns:55px 1fr;align-items:center;font-size:10px;opacity:.75}.aurora-layer-order{display:flex;gap:5px}.aurora-layer-order button{padding:4px 10px}.aurora-layer-empty{padding:22px;border:1px dashed rgba(255,255,255,.15);border-radius:9px;text-align:center;font-size:11px;opacity:.6}
+@media(max-width:700px){.aurora-layer-adds{grid-template-columns:repeat(3,1fr)}.aurora-layer-body{grid-template-columns:1fr}}
