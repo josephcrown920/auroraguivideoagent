@@ -446,10 +446,10 @@ function Index() {
     } catch (err) {
       const rawError = err instanceof Error ? err.message : "Something went wrong.";
       const referenceFailure = classifySeedanceReferenceError(rawError);
-      if (referenceFailure) setReferenceError(referenceFailure.message);
+      if (referenceFailure) setReferenceError("This reference needs a quick identity check before Aurora can use it. Choose an authorized reference or use the reference only for motion, framing, or style.");
       updateCreation(id, {
         status: "error",
-        error: referenceFailure?.message ?? rawError,
+        error: referenceFailure ? "Aurora needs an authorized reference for this person. Try a different reference or continue without the person's identity." : rawError,
       });
     } finally {
       setBusy(false);
@@ -864,8 +864,8 @@ function Index() {
             <div className="aurora-prompt-top">
               <button
                 className={`aurora-add-btn ${refs.length ? "has-ref" : ""}`}
-                aria-label="Add reference images"
-                aria-expanded={refOpen}
+                aria-label="Add reference"
+                title="Add a reference image, video, or audio"
                 onClick={() => setRefOpen((v) => !v)}
               >
                 {refs[0] ? <img src={refs[0]} alt="Reference" /> : "+"}
@@ -875,8 +875,8 @@ function Index() {
                 className="aurora-prompt-input"
                 placeholder={
                   mode === "image"
-                    ? "Try describing the image you want to create"
-                    : "Try describing the video you want to create"
+                    ? "What should Aurora create?"
+                    : "What should Aurora create?"
                 }
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
@@ -916,22 +916,22 @@ function Index() {
                       addRefUrl();
                     }
                   }}
-                  placeholder={"Image URL or asset://<ASSET_ID> (up to " + MAX_REFS + ")"}
-                  aria-label="Reference image or LAS asset"
+                  placeholder="Paste an image link"
+                  aria-label="Reference image link"
                 />
                 <input
                   type="text"
                   value={referenceVideo}
                   onChange={(e) => addReferenceVideoUrl(e.target.value)}
-                  placeholder="Reference video URL or asset://<ASSET_ID>"
-                  aria-label="Reference video URL or LAS asset"
+                  placeholder="Paste a reference video link"
+                  aria-label="Reference video link"
                 />
                 <input
                   type="text"
                   value={referenceAudio}
                   onChange={(e) => addReferenceAudioUrl(e.target.value)}
-                  placeholder="Optional audio URL or asset://<ASSET_ID>"
-                  aria-label="Reference audio URL or LAS asset"
+                  placeholder="Optional audio link"
+                  aria-label="Reference audio link"
                 />
                 <input
                   ref={fileRef}
@@ -945,10 +945,10 @@ function Index() {
                   }}
                 />
                 <button className="aurora-ref-upload" onClick={() => fileRef.current?.click()}>
-                  Upload images
+                  Upload reference image
                 </button>
                 {referenceVideo && !isLasAssetReference(referenceVideo) && !/^https?:\/\//i.test(referenceVideo) && (
-                  <small>Video references must be a public http(s) URL or an authorized asset:// reference.</small>
+                  <small>Use a public video link for video references.</small>
                 )}
                 {referenceError && (
                   <div className="aurora-ref-error" role="alert">{referenceError}</div>
