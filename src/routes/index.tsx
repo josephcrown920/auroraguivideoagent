@@ -23,6 +23,7 @@ import {
 import { SKILLS, buildSystemPrompt } from "../lib/aurora-skills";
 import { primeSpeech, speak, stopSpeech } from "../lib/aurora-voice";
 import { classifySeedanceReferenceError, isLasAssetReference } from "../lib/seedance-reference";
+import { LayersEditor } from "../components/video/LayersEditor";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -1043,6 +1044,8 @@ function Index() {
               </button>
             </div>
           </div>
+
+          <LayersEditor />
 
           <div className="aurora-stats-row">
             <div className="aurora-stat-item">
