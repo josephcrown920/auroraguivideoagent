@@ -1096,3 +1096,19 @@
   max-height: 240px;
   overflow-y: auto;
 }
+
+.aurora-ref-error {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 120, 120, 0.35);
+  background: rgba(255, 80, 80, 0.08);
+  color: #ffd7d7;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.aurora-ref-row small {
+  width: 100%;
+  color: rgba(255,255,255,0.62);
+  font-size: 11px;
+}
