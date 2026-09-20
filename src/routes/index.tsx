@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { upload } from "@vercel/blob/client";
 import "../aurora.css";
 import bg1 from "../assets/aurora-bg-1.jpg";
 import bg2 from "../assets/aurora-bg-2.jpg";
@@ -195,24 +196,25 @@ function Index() {
 
   const handleRefFiles = async (files?: FileList | null) => {
     if (!files?.length) return;
+    setReferenceError("");
     const picked = Array.from(files);
-    const tooBig = picked.filter((f) => f.size > 8 * 1024 * 1024);
-    if (tooBig.length) {
-      window.alert("Some images are larger than 8 MB and were skipped.");
+    const invalid = picked.filter((file) => file.size > 200 * 1024 * 1024);
+    if (invalid.length) setReferenceError("That file is too large. Reference media can be up to 200 MB.");
+    const usable = picked.filter((file) => file.size <= 200 * 1024 * 1024);
+    if (!usable.length) return;
+    try {
+      for (const file of usable) {
+        const blob = await upload("references/" + crypto.randomUUID() + "-" + file.name, file, {
+          access: "public",
+          handleUploadUrl: "/api/reference-upload",
+        });
+        if (file.type.startsWith("video/")) setReferenceVideo(blob.url);
+        else if (file.type.startsWith("audio/")) setReferenceAudio(blob.url);
+        else if (file.type.startsWith("image/")) setRefs((prev) => [...prev, blob.url].slice(0, MAX_REFS));
+      }
+    } catch {
+      setReferenceError("Aurora couldn’t add that reference. Try the upload again.");
     }
-    const usable = picked.filter((f) => f.size <= 8 * 1024 * 1024);
-    const dataUrls = await Promise.all(
-      usable.map(
-        (file) =>
-          new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(String(reader.result));
-            reader.onerror = () => reject(new Error("Could not read that file."));
-            reader.readAsDataURL(file);
-          }),
-      ),
-    );
-    setRefs((prev) => [...prev, ...dataUrls].slice(0, MAX_REFS));
   };
 
   const addReferenceVideoUrl = (value: string) => {
@@ -936,7 +938,7 @@ function Index() {
                 <input
                   ref={fileRef}
                   type="file"
-                  accept="image/*"
+                  accept="image/*,video/mp4,video/quicktime,audio/mpeg,audio/wav"
                   multiple
                   hidden
                   onChange={(e) => {
@@ -945,7 +947,7 @@ function Index() {
                   }}
                 />
                 <button className="aurora-ref-upload" onClick={() => fileRef.current?.click()}>
-                  Upload reference image
+                  Upload reference
                 </button>
                 {referenceVideo && !isLasAssetReference(referenceVideo) && !/^https?:\/\//i.test(referenceVideo) && (
                   <small>Use a public video link for video references.</small>
