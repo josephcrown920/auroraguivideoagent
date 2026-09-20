@@ -21,6 +21,7 @@ import {
 } from "../lib/aurora-models";
 import { SKILLS, buildSystemPrompt } from "../lib/aurora-skills";
 import { primeSpeech, speak, stopSpeech } from "../lib/aurora-voice";
+import { classifySeedanceReferenceError, isLasAssetReference } from "../lib/seedance-reference";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -160,7 +161,10 @@ function Index() {
   const [chatMenuOpen, setChatMenuOpen] = useState(false);
   const [refs, setRefs] = useState<string[]>([]);
   const [refDraft, setRefDraft] = useState("");
+  const [referenceVideo, setReferenceVideo] = useState("");
+  const [referenceAudio, setReferenceAudio] = useState("");
   const [refOpen, setRefOpen] = useState(false);
+  const [referenceError, setReferenceError] = useState("");
   const [creations, setCreations] = useState<Creation[]>([]);
   const [busy, setBusy] = useState(false);
   const [bg, setBg] = useState<BgTheme>("moon");
@@ -187,7 +191,7 @@ function Index() {
   const fileRef = useRef<HTMLInputElement>(null);
   const nextId = useRef(1);
 
-  const MAX_REFS = 6;
+  const MAX_REFS = 30;
 
   const handleRefFiles = async (files?: FileList | null) => {
     if (!files?.length) return;
@@ -209,6 +213,16 @@ function Index() {
       ),
     );
     setRefs((prev) => [...prev, ...dataUrls].slice(0, MAX_REFS));
+  };
+
+  const addReferenceVideoUrl = (value: string) => {
+    setReferenceVideo(value.trim());
+    setReferenceError("");
+  };
+
+  const addReferenceAudioUrl = (value: string) => {
+    setReferenceAudio(value.trim());
+    setReferenceError("");
   };
 
   const addRefUrl = () => {
@@ -350,7 +364,8 @@ function Index() {
     const currentList = currentMode === "image" ? IMAGE_MODELS : VIDEO_MODELS;
     const currentModel = currentMode === "image" ? imageModel : videoModel;
     const provider = modelProvider(currentModel, currentList);
-    const references = [...refs, ...(refDraft.trim() ? [refDraft.trim()] : [])];
+    const references = [...refs, ...(refDraft.trim() ? [refDraft.trim()] : [])].slice(0, MAX_REFS);
+    setReferenceError("");
     setCreations((prev) => [
       {
         id,
@@ -375,6 +390,11 @@ function Index() {
             prompt: text,
             size: IMAGE_SIZES[currentAspect][resolution],
             imageUrls: references,
+            imageRoles: references.map(() => "reference_image" as const),
+            videoUrl: currentMode === "video" ? referenceVideo.trim() || undefined : undefined,
+            audioUrl: currentMode === "video" ? referenceAudio.trim() || undefined : undefined,
+            resolution: currentMode === "video" ? "720p" : undefined,
+            generateAudio: currentMode === "video" ? true : undefined,
           },
           apiKey,
         );
@@ -417,9 +437,12 @@ function Index() {
         updateCreation(id, { status: "done", url });
       }
     } catch (err) {
+      const rawError = err instanceof Error ? err.message : "Something went wrong.";
+      const referenceFailure = classifySeedanceReferenceError(rawError);
+      if (referenceFailure) setReferenceError(referenceFailure.message);
       updateCreation(id, {
         status: "error",
-        error: err instanceof Error ? err.message : "Something went wrong.",
+        error: referenceFailure?.message ?? rawError,
       });
     } finally {
       setBusy(false);
@@ -886,8 +909,22 @@ function Index() {
                       addRefUrl();
                     }
                   }}
-                  placeholder={`Paste an image URL and press Enter, or upload (up to ${MAX_REFS})`}
-                  aria-label="Reference image URL"
+                  placeholder={"Image URL or asset://<ASSET_ID> (up to " + MAX_REFS + ")"}
+                  aria-label="Reference image or LAS asset"
+                />
+                <input
+                  type="text"
+                  value={referenceVideo}
+                  onChange={(e) => addReferenceVideoUrl(e.target.value)}
+                  placeholder="Reference video URL or asset://<ASSET_ID>"
+                  aria-label="Reference video URL or LAS asset"
+                />
+                <input
+                  type="text"
+                  value={referenceAudio}
+                  onChange={(e) => addReferenceAudioUrl(e.target.value)}
+                  placeholder="Optional audio URL or asset://<ASSET_ID>"
+                  aria-label="Reference audio URL or LAS asset"
                 />
                 <input
                   ref={fileRef}
@@ -903,6 +940,12 @@ function Index() {
                 <button className="aurora-ref-upload" onClick={() => fileRef.current?.click()}>
                   Upload images
                 </button>
+                {referenceVideo && !isLasAssetReference(referenceVideo) && !/^https?:\/\//i.test(referenceVideo) && (
+                  <small>Video references must be a public http(s) URL or an authorized asset:// reference.</small>
+                )}
+                {referenceError && (
+                  <div className="aurora-ref-error" role="alert">{referenceError}</div>
+                )}
                 {refs.length > 0 && (
                   <button className="aurora-ref-clear" onClick={() => setRefs([])}>
                     Clear all
