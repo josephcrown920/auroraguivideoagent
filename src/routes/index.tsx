@@ -390,11 +390,6 @@ function Index() {
             prompt: text,
             size: IMAGE_SIZES[currentAspect][resolution],
             imageUrls: references,
-            imageRoles: references.map(() => "reference_image" as const),
-            videoUrl: currentMode === "video" ? referenceVideo.trim() || undefined : undefined,
-            audioUrl: currentMode === "video" ? referenceAudio.trim() || undefined : undefined,
-            resolution: currentMode === "video" ? "720p" : undefined,
-            generateAudio: currentMode === "video" ? true : undefined,
           },
           apiKey,
         );
@@ -413,6 +408,11 @@ function Index() {
             ratio: currentAspect,
             duration,
             imageUrls: references,
+            imageRoles: references.map(() => "reference_image" as const),
+            videoUrl: referenceVideo.trim() || undefined,
+            audioUrl: referenceAudio.trim() || undefined,
+            resolution: "720p",
+            generateAudio: true,
           },
           apiKey,
         );
