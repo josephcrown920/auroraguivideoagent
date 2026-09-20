@@ -365,6 +365,13 @@ function Index() {
     const currentModel = currentMode === "image" ? imageModel : videoModel;
     const provider = modelProvider(currentModel, currentList);
     const references = [...refs, ...(refDraft.trim() ? [refDraft.trim()] : [])].slice(0, MAX_REFS);
+    const hasVideoReference = Boolean(referenceVideo.trim());
+    const hasAudioReference = Boolean(referenceAudio.trim());
+    const imageRoles = references.map(() =>
+      references.length === 1 && !hasVideoReference && !hasAudioReference
+        ? "first_frame" as const
+        : "reference_image" as const,
+    );
     setReferenceError("");
     setCreations((prev) => [
       {
@@ -408,7 +415,7 @@ function Index() {
             ratio: currentAspect,
             duration,
             imageUrls: references,
-            imageRoles: references.map(() => "reference_image" as const),
+            imageRoles,
             videoUrl: referenceVideo.trim() || undefined,
             audioUrl: referenceAudio.trim() || undefined,
             resolution: "720p",
