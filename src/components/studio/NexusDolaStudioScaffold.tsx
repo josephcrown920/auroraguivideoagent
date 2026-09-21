@@ -31,6 +31,7 @@ type GeneratedResult = {
   label: string;
   summary: string;
   provider: string;
+  status: "review" | "approved" | "exported";
 };
 
 export default function NexusDolaStudioScaffold() {
@@ -81,8 +82,9 @@ export default function NexusDolaStudioScaffold() {
         label: generated?.title ?? "Generated hero clip",
         summary:
           generated?.summary ??
-          "Scene concept generated with selected model, ready for review and export.",
+          "Scene concept generated with the selected model, ready for review and export.",
         provider: activeModel?.provider ?? "modelark",
+        status: "review",
       };
 
       setResults((prev) => [item, ...prev]);
@@ -102,6 +104,7 @@ export default function NexusDolaStudioScaffold() {
         summary:
           "Fallback demo result generated locally because the gateway endpoint is unavailable. This keeps the studio in a reviewable state.",
         provider: activeModel?.provider ?? "local",
+        status: "review",
       };
 
       setResults((prev) => [demo, ...prev]);
@@ -117,6 +120,36 @@ export default function NexusDolaStudioScaffold() {
     } finally {
       setIsRunning(false);
     }
+  };
+
+  const handleApprove = () => {
+    if (!selectedResult) return;
+
+    setResults((prev) =>
+      prev.map((result) =>
+        result.id === selectedResult.id ? { ...result, status: "approved" } : result,
+      ),
+    );
+    setRuntime((prev) => ({
+      ...prev,
+      currentStep: "export",
+      workflowStatus: "done",
+    }));
+  };
+
+  const handleExport = () => {
+    if (!selectedResult) return;
+
+    setResults((prev) =>
+      prev.map((result) =>
+        result.id === selectedResult.id ? { ...result, status: "exported" } : result,
+      ),
+    );
+    setRuntime((prev) => ({
+      ...prev,
+      currentStep: "export",
+      workflowStatus: "done",
+    }));
   };
 
   const statusTone = {
@@ -504,28 +537,31 @@ export default function NexusDolaStudioScaffold() {
               </div>
 
               <div style={{ display: "grid", gap: 8 }}>
-                {WORKFLOW_STEPS.map((step, index) => (
-                  <div
-                    key={step}
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      borderRadius: 10,
-                      border: "1px solid rgba(255,255,255,0.06)",
-                      background:
-                        runtime.currentStep === step
-                          ? "rgba(124,243,219,0.12)"
-                          : "rgba(255,255,255,0.02)",
-                      padding: "8px 10px",
-                    }}
-                  >
-                    <span>{workflowLabelMap[step]}</span>
-                    <span style={{ fontSize: 11, opacity: 0.8 }}>
-                      {runtime.currentStep === step ? "active" : index < WORKFLOW_STEPS.indexOf(runtime.currentStep as any) ? "done" : "queued"}
-                    </span>
-                  </div>
-                ))}
+                {WORKFLOW_STEPS.map((step, index) => {
+                  const currentIndex = WORKFLOW_STEPS.indexOf(runtime.currentStep as any);
+                  return (
+                    <div
+                      key={step}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        borderRadius: 10,
+                        border: "1px solid rgba(255,255,255,0.06)",
+                        background:
+                          runtime.currentStep === step
+                            ? "rgba(124,243,219,0.12)"
+                            : "rgba(255,255,255,0.02)",
+                        padding: "8px 10px",
+                      }}
+                    >
+                      <span>{workflowLabelMap[step]}</span>
+                      <span style={{ fontSize: 11, opacity: 0.8 }}>
+                        {runtime.currentStep === step ? "active" : index < currentIndex ? "done" : "queued"}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -590,6 +626,7 @@ export default function NexusDolaStudioScaffold() {
 
               <button
                 type="button"
+                onClick={handleExport}
                 style={{
                   background: "rgba(124,243,219,0.12)",
                   color: "#8ef7df",
@@ -629,6 +666,9 @@ export default function NexusDolaStudioScaffold() {
                   <div style={{ fontWeight: 700 }}>{result.label}</div>
                   <div style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}>{result.kind.toUpperCase()}</div>
                   <div style={{ marginTop: 10, opacity: 0.85 }}>{result.summary}</div>
+                  <div style={{ marginTop: 10, fontSize: 11, opacity: 0.8, textTransform: "uppercase" }}>
+                    {result.status}
+                  </div>
                 </button>
               ))}
             </div>
@@ -649,7 +689,40 @@ export default function NexusDolaStudioScaffold() {
                 <div style={{ fontSize: 22, fontWeight: 700, marginTop: 8 }}>{selectedResult.label}</div>
                 <div style={{ marginTop: 10, opacity: 0.9 }}>{selectedResult.summary}</div>
                 <div style={{ marginTop: 12, fontSize: 12, opacity: 0.7 }}>
-                  Provider: {selectedResult.provider}
+                  Provider: {selectedResult.provider} · Status: {selectedResult.status}
+                </div>
+
+                <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+                  <button
+                    type="button"
+                    onClick={handleApprove}
+                    style={{
+                      background: "rgba(255,186,73,0.12)",
+                      color: "#ffd88f",
+                      border: "1px solid rgba(255,186,73,0.38)",
+                      borderRadius: 10,
+                      padding: "8px 12px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Approve
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleExport}
+                    style={{
+                      background: "rgba(124,243,219,0.12)",
+                      color: "#8ef7df",
+                      border: "1px solid rgba(124,243,219,0.38)",
+                      borderRadius: 10,
+                      padding: "8px 12px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Send to export
+                  </button>
                 </div>
               </div>
             )}
