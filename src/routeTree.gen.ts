@@ -12,7 +12,12 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiAgentRouteImport } from './routes/api/agent'
 import { Route as ApiArkRouteImport } from './routes/api/ark'
+import { Route as ApiAssistantRouteImport } from './routes/api/assistant'
 import { Route as ApiChatStreamRouteImport } from './routes/api/chat-stream'
+import { Route as ApiContentAgentRouteImport } from './routes/api/content-agent'
+import { Route as ApiModelarkRouteImport } from './routes/api/modelark'
+import { Route as ApiModelarkDirectorRouteImport } from './routes/api/modelark-director'
+import { Route as ApiReferenceUploadRouteImport } from './routes/api/reference-upload'
 import { Route as ApiSpeechRouteImport } from './routes/api/speech'
 import { Route as ApiZenmuxRouteImport } from './routes/api/zenmux'
 
@@ -31,9 +36,34 @@ const ApiArkRoute = ApiArkRouteImport.update({
   path: '/api/ark',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAssistantRoute = ApiAssistantRouteImport.update({
+  id: '/api/assistant',
+  path: '/api/assistant',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiChatStreamRoute = ApiChatStreamRouteImport.update({
   id: '/api/chat-stream',
   path: '/api/chat-stream',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiContentAgentRoute = ApiContentAgentRouteImport.update({
+  id: '/api/content-agent',
+  path: '/api/content-agent',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiModelarkRoute = ApiModelarkRouteImport.update({
+  id: '/api/modelark',
+  path: '/api/modelark',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiModelarkDirectorRoute = ApiModelarkDirectorRouteImport.update({
+  id: '/api/modelark-director',
+  path: '/api/modelark-director',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiReferenceUploadRoute = ApiReferenceUploadRouteImport.update({
+  id: '/api/reference-upload',
+  path: '/api/reference-upload',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSpeechRoute = ApiSpeechRouteImport.update({
@@ -51,7 +81,12 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/agent': typeof ApiAgentRoute
   '/api/ark': typeof ApiArkRoute
+  '/api/assistant': typeof ApiAssistantRoute
   '/api/chat-stream': typeof ApiChatStreamRoute
+  '/api/content-agent': typeof ApiContentAgentRoute
+  '/api/modelark': typeof ApiModelarkRoute
+  '/api/modelark-director': typeof ApiModelarkDirectorRoute
+  '/api/reference-upload': typeof ApiReferenceUploadRoute
   '/api/speech': typeof ApiSpeechRoute
   '/api/zenmux': typeof ApiZenmuxRoute
 }
@@ -59,7 +94,12 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/agent': typeof ApiAgentRoute
   '/api/ark': typeof ApiArkRoute
+  '/api/assistant': typeof ApiAssistantRoute
   '/api/chat-stream': typeof ApiChatStreamRoute
+  '/api/content-agent': typeof ApiContentAgentRoute
+  '/api/modelark': typeof ApiModelarkRoute
+  '/api/modelark-director': typeof ApiModelarkDirectorRoute
+  '/api/reference-upload': typeof ApiReferenceUploadRoute
   '/api/speech': typeof ApiSpeechRoute
   '/api/zenmux': typeof ApiZenmuxRoute
 }
@@ -68,7 +108,12 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/api/agent': typeof ApiAgentRoute
   '/api/ark': typeof ApiArkRoute
+  '/api/assistant': typeof ApiAssistantRoute
   '/api/chat-stream': typeof ApiChatStreamRoute
+  '/api/content-agent': typeof ApiContentAgentRoute
+  '/api/modelark': typeof ApiModelarkRoute
+  '/api/modelark-director': typeof ApiModelarkDirectorRoute
+  '/api/reference-upload': typeof ApiReferenceUploadRoute
   '/api/speech': typeof ApiSpeechRoute
   '/api/zenmux': typeof ApiZenmuxRoute
 }
@@ -78,7 +123,12 @@ export interface FileRouteTypes {
     | '/'
     | '/api/agent'
     | '/api/ark'
+    | '/api/assistant'
     | '/api/chat-stream'
+    | '/api/content-agent'
+    | '/api/modelark'
+    | '/api/modelark-director'
+    | '/api/reference-upload'
     | '/api/speech'
     | '/api/zenmux'
   fileRoutesByTo: FileRoutesByTo
@@ -86,7 +136,12 @@ export interface FileRouteTypes {
     | '/'
     | '/api/agent'
     | '/api/ark'
+    | '/api/assistant'
     | '/api/chat-stream'
+    | '/api/content-agent'
+    | '/api/modelark'
+    | '/api/modelark-director'
+    | '/api/reference-upload'
     | '/api/speech'
     | '/api/zenmux'
   id:
@@ -94,7 +149,12 @@ export interface FileRouteTypes {
     | '/'
     | '/api/agent'
     | '/api/ark'
+    | '/api/assistant'
     | '/api/chat-stream'
+    | '/api/content-agent'
+    | '/api/modelark'
+    | '/api/modelark-director'
+    | '/api/reference-upload'
     | '/api/speech'
     | '/api/zenmux'
   fileRoutesById: FileRoutesById
@@ -103,7 +163,12 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApiAgentRoute: typeof ApiAgentRoute
   ApiArkRoute: typeof ApiArkRoute
+  ApiAssistantRoute: typeof ApiAssistantRoute
   ApiChatStreamRoute: typeof ApiChatStreamRoute
+  ApiContentAgentRoute: typeof ApiContentAgentRoute
+  ApiModelarkRoute: typeof ApiModelarkRoute
+  ApiModelarkDirectorRoute: typeof ApiModelarkDirectorRoute
+  ApiReferenceUploadRoute: typeof ApiReferenceUploadRoute
   ApiSpeechRoute: typeof ApiSpeechRoute
   ApiZenmuxRoute: typeof ApiZenmuxRoute
 }
@@ -131,11 +196,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiArkRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/assistant': {
+      id: '/api/assistant'
+      path: '/api/assistant'
+      fullPath: '/api/assistant'
+      preLoaderRoute: typeof ApiAssistantRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/chat-stream': {
       id: '/api/chat-stream'
       path: '/api/chat-stream'
       fullPath: '/api/chat-stream'
       preLoaderRoute: typeof ApiChatStreamRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/content-agent': {
+      id: '/api/content-agent'
+      path: '/api/content-agent'
+      fullPath: '/api/content-agent'
+      preLoaderRoute: typeof ApiContentAgentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/modelark': {
+      id: '/api/modelark'
+      path: '/api/modelark'
+      fullPath: '/api/modelark'
+      preLoaderRoute: typeof ApiModelarkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/modelark-director': {
+      id: '/api/modelark-director'
+      path: '/api/modelark-director'
+      fullPath: '/api/modelark-director'
+      preLoaderRoute: typeof ApiModelarkDirectorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/reference-upload': {
+      id: '/api/reference-upload'
+      path: '/api/reference-upload'
+      fullPath: '/api/reference-upload'
+      preLoaderRoute: typeof ApiReferenceUploadRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/speech': {
@@ -159,7 +259,12 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApiAgentRoute: ApiAgentRoute,
   ApiArkRoute: ApiArkRoute,
+  ApiAssistantRoute: ApiAssistantRoute,
   ApiChatStreamRoute: ApiChatStreamRoute,
+  ApiContentAgentRoute: ApiContentAgentRoute,
+  ApiModelarkRoute: ApiModelarkRoute,
+  ApiModelarkDirectorRoute: ApiModelarkDirectorRoute,
+  ApiReferenceUploadRoute: ApiReferenceUploadRoute,
   ApiSpeechRoute: ApiSpeechRoute,
   ApiZenmuxRoute: ApiZenmuxRoute,
 }

@@ -1133,3 +1133,19 @@
 .aurora-layer-adds svg{width:14px;height:14px}.aurora-layer-body{display:grid;grid-template-columns:1.5fr 1fr;gap:10px}.aurora-layer-list{max-height:190px;overflow:auto}
 .aurora-layer-row{display:grid;grid-template-columns:14px 16px 1fr repeat(3,26px);align-items:center;gap:5px;padding:8px;border:1px solid transparent;border-radius:9px;font-size:11px;cursor:pointer}.aurora-layer-row.active{border-color:rgba(140,120,255,.5);background:rgba(140,120,255,.08)}.aurora-layer-row svg{width:13px;height:13px;opacity:.7}.aurora-layer-row button{padding:4px;border:0;background:transparent}.aurora-layer-inspector{border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:10px;display:grid;gap:8px}.aurora-layer-inspector input[type=text],.aurora-layer-inspector>input{width:100%;box-sizing:border-box;border:1px solid rgba(255,255,255,.1);background:rgba(0,0,0,.2);color:inherit;border-radius:7px;padding:7px;font-size:11px}.aurora-layer-inspector label{display:grid;grid-template-columns:55px 1fr;align-items:center;font-size:10px;opacity:.75}.aurora-layer-order{display:flex;gap:5px}.aurora-layer-order button{padding:4px 10px}.aurora-layer-empty{padding:22px;border:1px dashed rgba(255,255,255,.15);border-radius:9px;text-align:center;font-size:11px;opacity:.6}
 @media(max-width:700px){.aurora-layer-adds{grid-template-columns:repeat(3,1fr)}.aurora-layer-body{grid-template-columns:1fr}}
+
+/* Motion control row (Seedance camera + motion energy) */
+.aurora-motion-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+  order: 9;
+}
+.aurora-motion-seg {
+  flex-wrap: wrap;
+}
+.aurora-motion-seg .aurora-seg-btn {
+  font-size: 12px;
+  padding: 6px 11px;
+}
