@@ -17,6 +17,7 @@ interface ArkBody {
   generateAudio?: boolean;
   watermark?: boolean;
   seed?: number;
+  cameraFixed?: boolean;
   resolution?: "480p" | "720p" | "1080p" | "4k";
   messages?: { role: string; content: string }[];
   model?: string;
@@ -170,7 +171,8 @@ export const Route = createFileRoute("/api/ark")({
             generate_audio: body.generateAudio ?? true,
             watermark: body.watermark ?? false,
           };
-          if (body.seed !== undefined) payload.seed = body.seed;
+          if (body.seed !== undefined) payload["seed"] = body.seed;
+          if (body.cameraFixed !== undefined) payload["camera_fixed"] = body.cameraFixed;
 
           return arkVideoFetch("/contents/generations/tasks", key, {
             method: "POST",
