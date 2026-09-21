@@ -58,10 +58,6 @@
 /* The primary creator flow stays intentionally quiet. Technical routing,
    model selection, and the director remain available to the app internally
    but are not part of the default generation surface. */
-.aurora-director { display: none; }
-.aurora-controls .aurora-model-wrap { display: none; }
-.aurora-stats-row { display: none; }
-.aurora-bg-switch { display: none; }
 .aurora-prompt-input { min-height: 110px; }
 .aurora-ref-row input[type="text"]::placeholder { color: rgba(255,255,255,.45); }
 
