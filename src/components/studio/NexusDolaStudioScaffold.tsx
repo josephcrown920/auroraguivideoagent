@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 
-import { WORKSPACES, defaultWorkspace, type WorkspaceId } from "../../lib/studio-workspaces";
-import { MODEL_REGISTRY, getModelsByCategory } from "../../lib/studio-model-registry";
-import { runProjectBrief } from "../../lib/generate-runner";
-import { defaultStudioRuntimeState } from "../../lib/workflow-state";
+import { WORKSPACES, defaultWorkspace, type WorkspaceId } from "../lib/studio-workspaces";
+import { MODEL_REGISTRY, getModelsByCategory } from "../lib/studio-model-registry";
+import { defaultStudioRuntimeState } from "../lib/workflow-state";
+import { requestModelGeneration } from "../lib/provider-adapters";
 
 const WORKFLOW_STEPS = [
   "brief_received",
@@ -25,17 +25,32 @@ const workflowLabelMap: Record<(typeof WORKFLOW_STEPS)[number], string> = {
   export: "Export",
 };
 
+type GeneratedResult = {
+  id: string;
+  kind: "image" | "video";
+  label: string;
+  summary: string;
+  provider: string;
+};
+
 export default function NexusDolaStudioScaffold() {
   const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceId>(defaultWorkspace);
   const [selectedModelId, setSelectedModelId] = useState<string>("dola-seed-2.1-turbo");
   const [brief, setBrief] = useState("");
   const [runtime, setRuntime] = useState(defaultStudioRuntimeState);
   const [isRunning, setIsRunning] = useState(false);
+  const [results, setResults] = useState<GeneratedResult[]>([]);
+  const [selectedResultId, setSelectedResultId] = useState<string | null>(null);
 
   const models = useMemo(() => getModelsByCategory("assistant"), []);
   const activeModel = useMemo(
     () => MODEL_REGISTRY.find((model) => model.id === selectedModelId) ?? MODEL_REGISTRY[0],
     [selectedModelId],
+  );
+
+  const selectedResult = useMemo(
+    () => results.find((result) => result.id === selectedResultId) ?? results[0] ?? null,
+    [results, selectedResultId],
   );
 
   const handleRunWorkflow = async () => {
@@ -51,29 +66,66 @@ export default function NexusDolaStudioScaffold() {
     setIsRunning(true);
 
     try {
-      const result = await runProjectBrief(brief, selectedModelId);
-      console.log("Gateway accepted request:", result);
+      const generated = await requestModelGeneration({
+        kind: "video",
+        modelId: selectedModelId,
+        brief,
+        aspect: "16:9",
+        durationSeconds: 12,
+        provider: activeModel?.provider,
+      });
 
+      const item: GeneratedResult = {
+        id: generated?.jobId ?? `job-${Date.now()}`,
+        kind: "video",
+        label: generated?.title ?? "Generated hero clip",
+        summary:
+          generated?.summary ??
+          "Scene concept generated with selected model, ready for review and export.",
+        provider: activeModel?.provider ?? "modelark",
+      };
+
+      setResults((prev) => [item, ...prev]);
+      setSelectedResultId(item.id);
       setRuntime((prev) => ({
         ...prev,
         selectedModel: selectedModelId,
         currentBrief: brief,
-        currentStep: "asset_generation",
-        workflowStatus: "running",
+        currentStep: "review",
+        workflowStatus: "review",
       }));
     } catch (error) {
-      console.error("Workflow failed:", error);
+      const demo: GeneratedResult = {
+        id: `demo-${Date.now()}`,
+        kind: "video",
+        label: "Demo review cut",
+        summary:
+          "Fallback demo result generated locally because the gateway endpoint is unavailable. This keeps the studio in a reviewable state.",
+        provider: activeModel?.provider ?? "local",
+      };
+
+      setResults((prev) => [demo, ...prev]);
+      setSelectedResultId(demo.id);
       setRuntime((prev) => ({
         ...prev,
         selectedModel: selectedModelId,
         currentBrief: brief,
-        currentStep: "brief_received",
-        workflowStatus: "idle",
+        currentStep: "review",
+        workflowStatus: "review",
       }));
+      console.error("Workflow failed, using demo result:", error);
     } finally {
       setIsRunning(false);
     }
   };
+
+  const statusTone = {
+    idle: { background: "rgba(255,255,255,0.02)", color: "#edf2ff" },
+    queued: { background: "rgba(84,145,255,0.12)", color: "#dfe7ff" },
+    running: { background: "rgba(124,243,219,0.12)", color: "#9ff8ef" },
+    review: { background: "rgba(255,186,73,0.12)", color: "#ffe4aa" },
+    done: { background: "rgba(117,255,161,0.12)", color: "#bafed2" },
+  }[runtime.workflowStatus];
 
   return (
     <div
@@ -439,7 +491,7 @@ export default function NexusDolaStudioScaffold() {
               ))}
             </div>
 
-            <div style={{ marginTop: 18 }}>
+            <div style={{ marginTop: 18, display: "grid", gap: 10 }}>
               <div
                 style={{
                   fontSize: 12,
@@ -451,7 +503,7 @@ export default function NexusDolaStudioScaffold() {
                 Workflow steps
               </div>
 
-              <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
+              <div style={{ display: "grid", gap: 8 }}>
                 {WORKFLOW_STEPS.map((step, index) => (
                   <div
                     key={step}
@@ -462,20 +514,147 @@ export default function NexusDolaStudioScaffold() {
                       borderRadius: 10,
                       border: "1px solid rgba(255,255,255,0.06)",
                       background:
-                        index === 0 ? "rgba(124,243,219,0.12)" : "rgba(255,255,255,0.02)",
+                        runtime.currentStep === step
+                          ? "rgba(124,243,219,0.12)"
+                          : "rgba(255,255,255,0.02)",
                       padding: "8px 10px",
                     }}
                   >
                     <span>{workflowLabelMap[step]}</span>
                     <span style={{ fontSize: 11, opacity: 0.8 }}>
-                      {index === 0 ? "active" : "queued"}
+                      {runtime.currentStep === step ? "active" : index < WORKFLOW_STEPS.indexOf(runtime.currentStep as any) ? "done" : "queued"}
                     </span>
                   </div>
                 ))}
               </div>
             </div>
+
+            <div
+              style={{
+                marginTop: 18,
+                borderRadius: 12,
+                padding: 14,
+                background: statusTone.background,
+                border: "1px solid rgba(255,255,255,0.08)",
+                color: statusTone.color,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 12,
+                  opacity: 0.8,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.12em",
+                }}
+              >
+                Current state
+              </div>
+              <div style={{ fontSize: 18, fontWeight: 700, marginTop: 6 }}>
+                {runtime.workflowStatus.toUpperCase()}
+              </div>
+            </div>
           </aside>
         </section>
+
+        {results.length > 0 && (
+          <section
+            style={{
+              marginTop: 20,
+              borderRadius: 18,
+              background: "rgba(18,22,32,0.9)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              padding: 18,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 12,
+              }}
+            >
+              <div>
+                <div
+                  style={{
+                    fontSize: 12,
+                    opacity: 0.7,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.12em",
+                  }}
+                >
+                  Review output
+                </div>
+                <div style={{ fontSize: 26, fontWeight: 700 }}>Generated assets</div>
+              </div>
+
+              <button
+                type="button"
+                style={{
+                  background: "rgba(124,243,219,0.12)",
+                  color: "#8ef7df",
+                  border: "1px solid rgba(124,243,219,0.38)",
+                  borderRadius: 10,
+                  padding: "8px 12px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                Export final
+              </button>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0,1fr))", gap: 12 }}>
+              {results.map((result) => (
+                <button
+                  key={result.id}
+                  type="button"
+                  onClick={() => setSelectedResultId(result.id)}
+                  style={{
+                    textAlign: "left",
+                    borderRadius: 14,
+                    border:
+                      selectedResult?.id === result.id
+                        ? "1px solid rgba(124,243,219,0.4)"
+                        : "1px solid rgba(255,255,255,0.08)",
+                    background:
+                      selectedResult?.id === result.id
+                        ? "rgba(124,243,219,0.12)"
+                        : "rgba(255,255,255,0.02)",
+                    color: "#edf2ff",
+                    padding: 14,
+                    cursor: "pointer",
+                  }}
+                >
+                  <div style={{ fontWeight: 700 }}>{result.label}</div>
+                  <div style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}>{result.kind.toUpperCase()}</div>
+                  <div style={{ marginTop: 10, opacity: 0.85 }}>{result.summary}</div>
+                </button>
+              ))}
+            </div>
+
+            {selectedResult && (
+              <div
+                style={{
+                  marginTop: 18,
+                  borderRadius: 14,
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  background: "rgba(255,255,255,0.02)",
+                  padding: 16,
+                }}
+              >
+                <div style={{ fontSize: 12, opacity: 0.7, textTransform: "uppercase", letterSpacing: "0.12em" }}>
+                  Selected asset
+                </div>
+                <div style={{ fontSize: 22, fontWeight: 700, marginTop: 8 }}>{selectedResult.label}</div>
+                <div style={{ marginTop: 10, opacity: 0.9 }}>{selectedResult.summary}</div>
+                <div style={{ marginTop: 12, fontSize: 12, opacity: 0.7 }}>
+                  Provider: {selectedResult.provider}
+                </div>
+              </div>
+            )}
+          </section>
+        )}
       </main>
     </div>
   );
