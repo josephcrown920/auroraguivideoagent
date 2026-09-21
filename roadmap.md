@@ -15,3 +15,5 @@
 - [x] Add voice, skills, and memory controls
 - [x] Verify two-image upload, four skill controls, and real voice audio response
 - [ ] Verify audible playback on the user’s device (requires user confirmation)
+- [x] Inline director (Dola Seed 2.1 Turbo) → prompt + video in editor, verified live
+- [x] Seedance motion controls (camera move + motion energy) wired through ModelArk, verified end to end
