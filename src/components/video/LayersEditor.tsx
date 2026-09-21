@@ -25,7 +25,7 @@ export function LayersEditor() {
   };
   const patch = (id: string, p: Partial<LayerItem>) => setLayers((v) => v.map((x) => x.id === id ? { ...x, ...p } : x));
   const remove = (id: string) => { setLayers((v) => v.filter((x) => x.id !== id)); if (selected === id) setSelected(null); };
-  const move = (id: string, d: -1 | 1) => setLayers((v) => { const i=v.findIndex(x=>x.id===id), j=i+d; if(i<0||j<0||j>=v.length)return v; const n=[...v]; [n[i],n[j]]=[n[j],n[i]]; return n; });
+  const move = (id: string, d: -1 | 1) => setLayers((v) => { const i=v.findIndex(x=>x.id===id), j=i+d; if(i<0||j<0||j>=v.length)return v; const n=[...v]; [n[i],n[j]]=[n[j]!,n[i]!]; return n; });
   const active = layers.find(x => x.id === selected);
 
   return <section className="aurora-layers-panel">
