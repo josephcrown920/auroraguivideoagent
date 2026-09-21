@@ -1,11 +1,36 @@
 import { useMemo, useState } from "react";
 
-import { WORKSPACES, defaultWorkspace, type WorkspaceId } from "../lib/studio-workspaces";
-import { MODEL_REGISTRY, getModelsByCategory } from "../lib/studio-model-registry";
+import { WORKSPACES, defaultWorkspace, type WorkspaceId } from "../../lib/studio-workspaces";
+import { MODEL_REGISTRY, getModelsByCategory } from "../../lib/studio-model-registry";
+import { runProjectBrief } from "../../lib/generate-runner";
+import { defaultStudioRuntimeState } from "../../lib/workflow-state";
+
+const WORKFLOW_STEPS = [
+  "brief_received",
+  "analysis",
+  "prompt_generation",
+  "asset_generation",
+  "timeline_assembly",
+  "review",
+  "export",
+] as const;
+
+const workflowLabelMap: Record<(typeof WORKFLOW_STEPS)[number], string> = {
+  brief_received: "Brief received",
+  analysis: "Analysis",
+  prompt_generation: "Prompt generation",
+  asset_generation: "Asset generation",
+  timeline_assembly: "Timeline assembly",
+  review: "Review",
+  export: "Export",
+};
 
 export default function NexusDolaStudioScaffold() {
   const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceId>(defaultWorkspace);
   const [selectedModelId, setSelectedModelId] = useState<string>("dola-seed-2.1-turbo");
+  const [brief, setBrief] = useState("");
+  const [runtime, setRuntime] = useState(defaultStudioRuntimeState);
+  const [isRunning, setIsRunning] = useState(false);
 
   const models = useMemo(() => getModelsByCategory("assistant"), []);
   const activeModel = useMemo(
@@ -13,39 +38,86 @@ export default function NexusDolaStudioScaffold() {
     [selectedModelId],
   );
 
+  const handleRunWorkflow = async () => {
+    if (!brief.trim()) return;
+
+    setRuntime((prev) => ({
+      ...prev,
+      selectedModel: selectedModelId,
+      currentBrief: brief,
+      currentStep: "brief_received",
+      workflowStatus: "queued",
+    }));
+    setIsRunning(true);
+
+    try {
+      const result = await runProjectBrief(brief, selectedModelId);
+      console.log("Gateway accepted request:", result);
+
+      setRuntime((prev) => ({
+        ...prev,
+        selectedModel: selectedModelId,
+        currentBrief: brief,
+        currentStep: "asset_generation",
+        workflowStatus: "running",
+      }));
+    } catch (error) {
+      console.error("Workflow failed:", error);
+      setRuntime((prev) => ({
+        ...prev,
+        selectedModel: selectedModelId,
+        currentBrief: brief,
+        currentStep: "brief_received",
+        workflowStatus: "idle",
+      }));
+    } finally {
+      setIsRunning(false);
+    }
+  };
+
   return (
-    <div style={{
-      minHeight: "100vh",
-      display: "grid",
-      gridTemplateColumns: "260px minmax(0, 1fr)",
-      background: "#05070d",
-      color: "#edf2ff",
-      fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
-    }}>
-      <aside style={{
-        background: "rgba(15,19,30,0.94)",
-        borderRight: "1px solid rgba(255,255,255,0.08)",
-        padding: "22px 14px",
-      }}>
-        <div style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "10px",
-          fontWeight: 700,
-          fontSize: "18px",
-          marginBottom: "18px",
-          padding: "0 8px",
-        }}>
-          <div style={{
-            width: 26,
-            height: 26,
-            borderRadius: 8,
-            background: "linear-gradient(135deg, #77f1db, #85a4ff)",
-            display: "grid",
-            placeItems: "center",
-            color: "#071018",
-            fontSize: "12px",
-          }}>A</div>
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "grid",
+        gridTemplateColumns: "260px minmax(0, 1fr)",
+        background: "#05070d",
+        color: "#edf2ff",
+        fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+      }}
+    >
+      <aside
+        style={{
+          background: "rgba(15,19,30,0.94)",
+          borderRight: "1px solid rgba(255,255,255,0.08)",
+          padding: "22px 14px",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            fontWeight: 700,
+            fontSize: "18px",
+            marginBottom: "18px",
+            padding: "0 8px",
+          }}
+        >
+          <div
+            style={{
+              width: 26,
+              height: 26,
+              borderRadius: 8,
+              background: "linear-gradient(135deg, #77f1db, #85a4ff)",
+              display: "grid",
+              placeItems: "center",
+              color: "#071018",
+              fontSize: "12px",
+            }}
+          >
+            A
+          </div>
           Nexus Dola
         </div>
 
@@ -61,7 +133,9 @@ export default function NexusDolaStudioScaffold() {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
-                  border: active ? "1px solid rgba(113, 235, 214, 0.8)" : "1px solid rgba(255,255,255,0.08)",
+                  border: active
+                    ? "1px solid rgba(113, 235, 214, 0.8)"
+                    : "1px solid rgba(255,255,255,0.08)",
                   background: active ? "rgba(17, 243, 205, 0.12)" : "rgba(255,255,255,0.02)",
                   color: active ? "#dffef8" : "#dbe4ff",
                   borderRadius: 12,
@@ -82,25 +156,38 @@ export default function NexusDolaStudioScaffold() {
         </nav>
       </aside>
 
-      <main style={{
-        padding: "28px 24px 24px",
-        background: "radial-gradient(circle at top, rgba(110,140,255,0.12), transparent 35%), #05070d",
-      }}>
-        <header style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 18,
-          padding: "12px 14px",
-          borderRadius: 16,
-          background: "rgba(255,255,255,0.02)",
-          border: "1px solid rgba(255,255,255,0.08)",
-        }}>
+      <main
+        style={{
+          padding: "28px 24px 24px",
+          background: "radial-gradient(circle at top, rgba(110,140,255,0.12), transparent 35%), #05070d",
+        }}
+      >
+        <header
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 18,
+            padding: "12px 14px",
+            borderRadius: 16,
+            background: "rgba(255,255,255,0.02)",
+            border: "1px solid rgba(255,255,255,0.08)",
+          }}
+        >
           <div>
-            <div style={{ fontSize: 12, opacity: 0.75, textTransform: "uppercase", letterSpacing: "0.12em" }}>
+            <div
+              style={{
+                fontSize: 12,
+                opacity: 0.75,
+                textTransform: "uppercase",
+                letterSpacing: "0.12em",
+              }}
+            >
               Studio Workspace
             </div>
-            <div style={{ fontSize: 24, fontWeight: 800 }}>{WORKSPACES.find((w) => w.id === activeWorkspace)?.label}</div>
+            <div style={{ fontSize: 24, fontWeight: 800 }}>
+              {WORKSPACES.find((w) => w.id === activeWorkspace)?.label}
+            </div>
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -121,71 +208,100 @@ export default function NexusDolaStudioScaffold() {
                 </option>
               ))}
             </select>
-            <button type="button" style={{
-              background: "linear-gradient(135deg, #7cf3db, #8dff7c)",
-              color: "#08100f",
-              border: 0,
-              borderRadius: 10,
-              padding: "10px 16px",
-              fontWeight: 800,
-              cursor: "pointer",
-            }}>
-              Run workflow
+
+            <button
+              type="button"
+              onClick={handleRunWorkflow}
+              disabled={!brief.trim() || isRunning}
+              style={{
+                background: "linear-gradient(135deg, #7cf3db, #8dff7c)",
+                color: "#08100f",
+                border: 0,
+                borderRadius: 10,
+                padding: "10px 16px",
+                fontWeight: 800,
+                cursor: brief.trim() && !isRunning ? "pointer" : "default",
+                opacity: brief.trim() && !isRunning ? 1 : 0.6,
+              }}
+            >
+              {isRunning ? "Running..." : "Run workflow"}
             </button>
           </div>
         </header>
 
-        <section style={{
-          display: "grid",
-          gridTemplateColumns: "minmax(0, 1.2fr) minmax(260px, 420px)",
-          gap: 20,
-        }}>
-          <div style={{
-            borderRadius: 18,
-            padding: 22,
-            background: "rgba(18,22,32,0.9)",
-            border: "1px solid rgba(255,255,255,0.08)",
-            minHeight: 460,
-          }}>
-            <div style={{
-              display: "flex",
-              justifyContent: "space-between",
-              marginBottom: 18,
-              alignItems: "center",
-            }}>
+        <section
+          style={{
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 1.2fr) minmax(260px, 420px)",
+            gap: 20,
+          }}
+        >
+          <div
+            style={{
+              borderRadius: 18,
+              padding: 22,
+              background: "rgba(18,22,32,0.9)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              minHeight: 460,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: 18,
+                alignItems: "center",
+              }}
+            >
               <div>
-                <div style={{ fontSize: 12, opacity: 0.7, textTransform: "uppercase", letterSpacing: "0.12em" }}>
+                <div
+                  style={{
+                    fontSize: 12,
+                    opacity: 0.7,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.12em",
+                  }}
+                >
                   Active model
                 </div>
                 <div style={{ fontSize: 24, fontWeight: 700 }}>{activeModel?.label}</div>
               </div>
-              <div style={{
-                fontSize: 12,
-                padding: "6px 10px",
-                borderRadius: 999,
-                background: "rgba(124,243,219,0.12)",
-                color: "#8ef7df",
-                border: "1px solid rgba(124,243,219,0.38)",
-              }}>
+
+              <div
+                style={{
+                  fontSize: 12,
+                  padding: "6px 10px",
+                  borderRadius: 999,
+                  background: "rgba(124,243,219,0.12)",
+                  color: "#8ef7df",
+                  border: "1px solid rgba(124,243,219,0.38)",
+                }}
+              >
                 {activeModel?.provider}
               </div>
             </div>
 
-            <div style={{
-              display: "grid",
-              gap: 12,
-              fontSize: 14,
-              opacity: 0.86,
-            }}>
-              <div style={{
-                borderRadius: 14,
-                padding: 16,
-                background: "rgba(255,255,255,0.02)",
-                border: "1px solid rgba(255,255,255,0.06)",
-              }}>
+            <div
+              style={{
+                display: "grid",
+                gap: 12,
+                fontSize: 14,
+                opacity: 0.86,
+              }}
+            >
+              <div
+                style={{
+                  borderRadius: 14,
+                  padding: 16,
+                  background: "rgba(255,255,255,0.02)",
+                  border: "1px solid rgba(255,255,255,0.06)",
+                }}
+              >
                 <div style={{ fontWeight: 700, marginBottom: 8 }}>Creative brief</div>
                 <textarea
                   rows={7}
+                  value={brief}
+                  onChange={(e) => setBrief(e.target.value)}
                   placeholder="Describe a scene, style, camera move, mood, shot structure, and references..."
                   style={{
                     width: "100%",
@@ -202,11 +318,13 @@ export default function NexusDolaStudioScaffold() {
                 />
               </div>
 
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(3, minmax(0,1fr))",
-                gap: 12,
-              }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(3, minmax(0,1fr))",
+                  gap: 12,
+                }}
+              >
                 {models.map((model) => (
                   <button
                     key={model.id}
@@ -215,8 +333,14 @@ export default function NexusDolaStudioScaffold() {
                     style={{
                       textAlign: "left",
                       padding: 14,
-                      background: selectedModelId === model.id ? "rgba(124,243,219,0.12)" : "rgba(255,255,255,0.02)",
-                      border: selectedModelId === model.id ? "1px solid rgba(124,243,219,0.45)" : "1px solid rgba(255,255,255,0.06)",
+                      background:
+                        selectedModelId === model.id
+                          ? "rgba(124,243,219,0.12)"
+                          : "rgba(255,255,255,0.02)",
+                      border:
+                        selectedModelId === model.id
+                          ? "1px solid rgba(124,243,219,0.45)"
+                          : "1px solid rgba(255,255,255,0.06)",
                       borderRadius: 12,
                       color: "#edf2ff",
                       cursor: "pointer",
@@ -227,20 +351,57 @@ export default function NexusDolaStudioScaffold() {
                   </button>
                 ))}
               </div>
+
+              <div
+                style={{
+                  borderRadius: 12,
+                  padding: 14,
+                  background: "rgba(255,255,255,0.02)",
+                  border: "1px solid rgba(255,255,255,0.06)",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 12,
+                    opacity: 0.7,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.12em",
+                  }}
+                >
+                  Runtime status
+                </div>
+                <div style={{ marginTop: 8, fontWeight: 700 }}>
+                  {runtime.workflowStatus.toUpperCase()} · {runtime.currentStep}
+                </div>
+                <div style={{ marginTop: 6, opacity: 0.8 }}>
+                  {runtime.currentBrief || "No active brief yet"}
+                </div>
+              </div>
             </div>
           </div>
 
-          <aside style={{
-            borderRadius: 18,
-            padding: 18,
-            background: "rgba(18,22,32,0.9)",
-            border: "1px solid rgba(255,255,255,0.08)",
-            minHeight: 460,
-          }}>
-            <div style={{ fontSize: 12, opacity: 0.7, textTransform: "uppercase", letterSpacing: "0.12em" }}>
+          <aside
+            style={{
+              borderRadius: 18,
+              padding: 18,
+              background: "rgba(18,22,32,0.9)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              minHeight: 460,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 12,
+                opacity: 0.7,
+                textTransform: "uppercase",
+                letterSpacing: "0.12em",
+              }}
+            >
               Orchestration
             </div>
-            <div style={{ fontSize: 26, fontWeight: 700, margin: "8px 0 16px" }}>Agent stack</div>
+            <div style={{ fontSize: 26, fontWeight: 700, margin: "8px 0 16px" }}>
+              Agent stack
+            </div>
 
             <div style={{ display: "grid", gap: 10 }}>
               {[
@@ -265,15 +426,53 @@ export default function NexusDolaStudioScaffold() {
                   }}
                 >
                   <span>{name}</span>
-                  <span style={{
-                    width: 10,
-                    height: 10,
-                    borderRadius: "50%",
-                    background: index < 3 ? "#7cf3db" : "#d6d9ee",
-                    opacity: index < 3 ? 1 : 0.75,
-                  }} />
+                  <span
+                    style={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: "50%",
+                      background: index < 3 ? "#7cf3db" : "#d6d9ee",
+                      opacity: index < 3 ? 1 : 0.75,
+                    }}
+                  />
                 </div>
               ))}
+            </div>
+
+            <div style={{ marginTop: 18 }}>
+              <div
+                style={{
+                  fontSize: 12,
+                  opacity: 0.7,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.12em",
+                }}
+              >
+                Workflow steps
+              </div>
+
+              <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
+                {WORKFLOW_STEPS.map((step, index) => (
+                  <div
+                    key={step}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      borderRadius: 10,
+                      border: "1px solid rgba(255,255,255,0.06)",
+                      background:
+                        index === 0 ? "rgba(124,243,219,0.12)" : "rgba(255,255,255,0.02)",
+                      padding: "8px 10px",
+                    }}
+                  >
+                    <span>{workflowLabelMap[step]}</span>
+                    <span style={{ fontSize: 11, opacity: 0.8 }}>
+                      {index === 0 ? "active" : "queued"}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           </aside>
         </section>
