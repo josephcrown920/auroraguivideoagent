@@ -20,7 +20,7 @@ export function LayersEditor() {
   const [selected, setSelected] = useState<string | null>(null);
 
   const add = (type: LayerItem["type"]) => {
-    const layer = { id: crypto.randomUUID(), type, name: \`\${type[0].toUpperCase()}\${type.slice(1)} \${layers.length + 1}\`, visible: true, locked: false, opacity: 1, x: 0, y: 0, scale: 1 };
+    const layer = { id: crypto.randomUUID(), type, name: `${type[0].toUpperCase()}${type.slice(1)} ${layers.length + 1}`, visible: true, locked: false, opacity: 1, x: 0, y: 0, scale: 1 };
     setLayers((v) => [...v, layer]); setSelected(layer.id);
   };
   const patch = (id: string, p: Partial<LayerItem>) => setLayers((v) => v.map((x) => x.id === id ? { ...x, ...p } : x));
@@ -35,7 +35,7 @@ export function LayersEditor() {
     </div>
     <div className="aurora-layer-body">
       <div className="aurora-layer-list">
-        {layers.length===0 ? <div className="aurora-layer-empty"><Plus/>Add video, image, text, audio or overlay layers.</div> : [...layers].reverse().map(layer => { const Icon=ICONS[layer.type]; return <div key={layer.id} className={\`aurora-layer-row \${selected===layer.id?"active":""}\`} onClick={()=>setSelected(layer.id)}>
+        {layers.length===0 ? <div className="aurora-layer-empty"><Plus/>Add video, image, text, audio or overlay layers.</div> : [...layers].reverse().map(layer => { const Icon=ICONS[layer.type]; return <div key={layer.id} className={`aurora-layer-row ${selected===layer.id?"active":""}`} onClick={()=>setSelected(layer.id)}>
           <GripVertical/><Icon/><span>{layer.name}</span>
           <button onClick={(e)=>{e.stopPropagation();patch(layer.id,{visible:!layer.visible})}}>{layer.visible?<Eye/>:<EyeOff/>}</button>
           <button onClick={(e)=>{e.stopPropagation();patch(layer.id,{locked:!layer.locked})}}>{layer.locked?<Lock/>:<LockOpen/>}</button>
