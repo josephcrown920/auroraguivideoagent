@@ -47,6 +47,9 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
+type CameraMove = "auto" | "static" | "push" | "orbit" | "track" | "crane" | "handheld";
+type MotionLevel = "gentle" | "balanced" | "dynamic";
+
 type Mode = "image" | "video";
 type Aspect = "1:1" | "16:9" | "9:16";
 type BgTheme = "moon" | "chrome" | "collage" | "court";
@@ -87,6 +90,8 @@ interface StoredState {
   aspect?: Aspect;
   resolution?: "2K" | "4K";
   duration?: number;
+  cameraMove?: CameraMove;
+  motion?: MotionLevel;
   imageModel?: string;
   videoModel?: string;
   chatModel?: string;
@@ -149,6 +154,31 @@ async function callApi<T>(provider: Provider, body: unknown, key?: string): Prom
   return json as T;
 }
 
+const CAMERA_MOVES: { id: CameraMove; label: string; cue: string }[] = [
+  { id: "auto", label: "Auto", cue: "" },
+  { id: "static", label: "Locked off", cue: "locked-off static camera, no camera movement" },
+  { id: "push", label: "Push in", cue: "slow dolly push-in toward the subject" },
+  { id: "orbit", label: "Orbit", cue: "smooth orbit around the subject" },
+  { id: "track", label: "Tracking", cue: "steady tracking shot following the subject" },
+  { id: "crane", label: "Crane", cue: "rising crane shot revealing the space" },
+  { id: "handheld", label: "Handheld", cue: "energetic handheld camera, subtle shake" },
+];
+
+const MOTION_LEVELS: { id: MotionLevel; label: string; cue: string }[] = [
+  { id: "gentle", label: "Gentle", cue: "minimal subject motion, slow and controlled" },
+  { id: "balanced", label: "Balanced", cue: "natural subject motion" },
+  { id: "dynamic", label: "Dynamic", cue: "high-energy motion, fast action and movement" },
+];
+
+function applyMotion(text: string, move: CameraMove, level: MotionLevel) {
+  const cues = [
+    CAMERA_MOVES.find((c) => c.id === move)?.cue,
+    MOTION_LEVELS.find((m) => m.id === level)?.cue,
+  ].filter(Boolean);
+  if (!cues.length) return text;
+  return `${text.trim().replace(/[.\s]+$/, "")}. Camera: ${cues.join("; ")}.`;
+}
+
 function Index() {
   const [hydrated, setHydrated] = useState(false);
   const [mode, setMode] = useState<Mode>("image");
@@ -156,6 +186,8 @@ function Index() {
   const [aspect, setAspect] = useState<Aspect>("1:1");
   const [resolution, setResolution] = useState<"2K" | "4K">("2K");
   const [duration, setDuration] = useState(5);
+  const [cameraMove, setCameraMove] = useState<CameraMove>("auto");
+  const [motion, setMotion] = useState<MotionLevel>("balanced");
   const [imageModel, setImageModel] = useState(IMAGE_MODELS[0]!.id);
   const [videoModel, setVideoModel] = useState(VIDEO_MODELS[0]!.id);
   const [chatModel, setChatModel] = useState(CHAT_MODELS[0]!.id);
@@ -253,6 +285,8 @@ function Index() {
         if (s.aspect) setAspect(s.aspect);
         if (s.resolution) setResolution(s.resolution);
         if (s.duration) setDuration(s.duration);
+        if (s.cameraMove) setCameraMove(s.cameraMove);
+        if (s.motion) setMotion(s.motion);
         if (s.imageModel) setImageModel(s.imageModel);
         if (s.videoModel) setVideoModel(s.videoModel);
         if (s.chatModel) setChatModel(s.chatModel);
@@ -295,6 +329,8 @@ function Index() {
         aspect,
         resolution,
         duration,
+        cameraMove,
+        motion,
         imageModel,
         videoModel,
         chatModel,
@@ -316,6 +352,8 @@ function Index() {
     aspect,
     resolution,
     duration,
+    cameraMove,
+    motion,
     imageModel,
     videoModel,
     chatModel,
@@ -414,7 +452,8 @@ function Index() {
           {
             kind: "video",
             model: currentModel,
-            prompt: text,
+            prompt: applyMotion(text, cameraMove, motion),
+            cameraFixed: cameraMove === "static",
             ratio: currentAspect,
             duration,
             imageUrls: references,
@@ -1031,6 +1070,35 @@ function Index() {
                       {d}s
                     </button>
                   ))}
+                </div>
+              )}
+
+              {mode === "video" && (
+                <div className="aurora-motion-row">
+                  <div className="aurora-seg-control aurora-motion-seg">
+                    {CAMERA_MOVES.map((c) => (
+                      <button
+                        key={c.id}
+                        className={`aurora-seg-btn ${cameraMove === c.id ? "active" : ""}`}
+                        onClick={() => setCameraMove(c.id)}
+                        title={c.cue || "Let Seedance choose the camera move"}
+                      >
+                        {c.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="aurora-seg-control aurora-motion-seg">
+                    {MOTION_LEVELS.map((m) => (
+                      <button
+                        key={m.id}
+                        className={`aurora-seg-btn ${motion === m.id ? "active" : ""}`}
+                        onClick={() => setMotion(m.id)}
+                        title={m.cue}
+                      >
+                        {m.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
 
