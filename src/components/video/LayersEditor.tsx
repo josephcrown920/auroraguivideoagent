@@ -20,7 +20,7 @@ export function LayersEditor() {
   const [selected, setSelected] = useState<string | null>(null);
 
   const add = (type: LayerItem["type"]) => {
-    const layer = { id: crypto.randomUUID(), type, name: `${type[0].toUpperCase()}${type.slice(1)} ${layers.length + 1}`, visible: true, locked: false, opacity: 1, x: 0, y: 0, scale: 1 };
+    const layer = { id: crypto.randomUUID(), type, name: `${type[0]!.toUpperCase()}${type.slice(1)} ${layers.length + 1}`, visible: true, locked: false, opacity: 1, x: 0, y: 0, scale: 1 };
     setLayers((v) => [...v, layer]); setSelected(layer.id);
   };
   const patch = (id: string, p: Partial<LayerItem>) => setLayers((v) => v.map((x) => x.id === id ? { ...x, ...p } : x));
