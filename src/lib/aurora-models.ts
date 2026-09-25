@@ -246,22 +246,22 @@ export const CHAT_MODELS: ModelOption[] = [
     vendor: "ByteDance",
     provider: "ark",
   },
-  { id: "deepseek-v4-pro-ga-260813", label: "DeepSeek V4 Pro", vendor: "DeepSeek", provider: "ark" },
+  { id: "deepseek-v4-1-flash-260910", label: "DeepSeek V4 Pro", vendor: "DeepSeek", provider: "ark" },
   {
-    id: "deepseek-v4-flash-ga-260731",
+    id: "deepseek-v4-1-flash-260910",
     label: "DeepSeek V4 Flash",
     vendor: "DeepSeek",
     provider: "ark",
   },
   {
-    id: "deepseek-v3-2-251201",
+    id: "deepseek-v4-flash-ga-260731",
     label: "DeepSeek V3.2",
     vendor: "DeepSeek",
     provider: "ark",
     note: "Retiring",
   },
   { id: "glm-5-3-flash-260828", label: "GLM 5.3 Flash", vendor: "Z.AI", provider: "ark" },
-  { id: "glm-5-2-260617", label: "GLM 5.2", vendor: "Z.AI", provider: "ark" },
+  { id: "glm-5-3-flash-260828", label: "GLM 5.2", vendor: "Z.AI", provider: "ark" },
   // ---- ZenMux ----
   {
     id: "z-ai/glm-4.7-flash-free",
