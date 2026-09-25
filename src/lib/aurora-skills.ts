@@ -18,6 +18,43 @@ Use his world (Port Harcourt streets, night rain, chrome, moonlight, luxury cont
 
 export const SKILLS: Skill[] = [
   {
+    id: "image-creation",
+    label: "Image creation",
+    blurb: "Generate art direction, references, character sheets and image prompts",
+    prompt: "SKILL — IMAGE CREATION\nCreate production-ready image plans. For each image specify subject, environment, composition, lens, lighting, wardrobe/materials, palette, continuity constraints, reference assets and model choice. Support single images, keyframes, character sheets, locations, props and style frames.",
+  },
+  {
+    id: "video-creation",
+    label: "Video creation",
+    blurb: "Plan text-to-video, image-to-video and reference-driven shots",
+    prompt: "SKILL — VIDEO CREATION\nBuild shot-level video instructions: duration, aspect ratio, action, camera movement, lens, blocking, lighting, temporal continuity, first/last-frame intent, references, audio intent and model choice. Prefer targeted shot generation rather than rebuilding an unchanged sequence.",
+  },
+  {
+    id: "multimodal-vision",
+    label: "Multimodal vision",
+    blurb: "Inspect images, video, audio and documents as production evidence",
+    prompt: "SKILL — MULTIMODAL VISION\nTreat attached images and videos as evidence. Identify subjects, actions, composition, camera, lighting, wardrobe, environment, continuity, text, timing and possible edit points. Distinguish observed facts from inferred intent. Return structured findings that downstream agents can consume.",
+  },
+  {
+    id: "multi-character-scenes",
+    label: "Multi-character scenes",
+    blurb: "Maintain identity, blocking and continuity across multiple characters",
+    prompt: "SKILL — MULTI-CHARACTER SCENES\nTrack every character by stable ID. Maintain appearance, wardrobe, relative position, screen direction, gaze, interaction, props and emotional state across shots. When a scene contains multiple people, produce a character map and blocking plan before generation.",
+  },
+  {
+    id: "visual-continuity",
+    label: "Visual continuity",
+    blurb: "Continuity locks for characters, worlds, props, camera and color",
+    prompt: "SKILL — VISUAL CONTINUITY\nCreate hard locks for approved character references, locations, props, wardrobe, lighting logic, camera language and grade. Flag contradictions before generation or timeline edits.",
+  },
+  {
+    id: "timeline-editing",
+    label: "Agentic timeline editing",
+    blurb: "Translate natural language into reversible layer-aware timeline operations",
+    prompt: "SKILL — AGENTIC TIMELINE EDITING\nResolve commands to scene, shot, layer and time ranges. Support trim, split, reorder, replace, regenerate, retime, reframe, captions, dialogue, music, SFX and multi-layer composition. Preserve unaffected media and make edits reversible.",
+  },
+
+  {
     id: "cinematic",
     label: "Cinematic direction",
     blurb: "Shot lists, lenses, lighting, colour grade",
