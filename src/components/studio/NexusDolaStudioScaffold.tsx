@@ -38,7 +38,7 @@ type GeneratedResult = {
 
 export default function NexusDolaStudioScaffold() {
   const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceId>(defaultWorkspace);
-  const [selectedModelId, setSelectedModelId] = useState<string>("dola-seed-2.1-turbo");
+  const [selectedModelId, setSelectedModelId] = useState<string>("dola-seed-2-1-turbo-260628");
   const [brief, setBrief] = useState("");
   const [runtime, setRuntime] = useState(defaultStudioRuntimeState);
   const [isRunning, setIsRunning] = useState(false);
