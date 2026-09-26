@@ -4,6 +4,8 @@ import { WORKSPACES, defaultWorkspace, type WorkspaceId } from "../lib/studio-wo
 import { MODEL_REGISTRY, getModelsByCategory } from "../lib/studio-model-registry";
 import { defaultStudioRuntimeState } from "../lib/workflow-state";
 import { requestModelGeneration } from "../lib/provider-adapters";
+import { primeSpeech, speak } from "../lib/aurora-voice";
+import ComfyWorkflowLibrary from "./ComfyWorkflowLibrary";
 
 const WORKFLOW_STEPS = [
   "brief_received",
@@ -42,6 +44,7 @@ export default function NexusDolaStudioScaffold() {
   const [isRunning, setIsRunning] = useState(false);
   const [results, setResults] = useState<GeneratedResult[]>([]);
   const [selectedResultId, setSelectedResultId] = useState<string | null>(null);
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
 
   const models = useMemo(() => getModelsByCategory("assistant"), []);
   const activeModel = useMemo(
@@ -65,6 +68,8 @@ export default function NexusDolaStudioScaffold() {
       workflowStatus: "queued",
     }));
     setIsRunning(true);
+    primeSpeech();
+    if (voiceEnabled) void speak("I’m starting the production workflow now.");
 
     try {
       const generated = await requestModelGeneration({
@@ -96,6 +101,7 @@ export default function NexusDolaStudioScaffold() {
         currentStep: "review",
         workflowStatus: "review",
       }));
+      if (voiceEnabled) void speak(item.summary);
     } catch (error) {
       const demo: GeneratedResult = {
         id: `demo-${Date.now()}`,
@@ -117,6 +123,7 @@ export default function NexusDolaStudioScaffold() {
         workflowStatus: "review",
       }));
       console.error("Workflow failed, using demo result:", error);
+      if (voiceEnabled) void speak(demo.summary);
     } finally {
       setIsRunning(false);
     }
@@ -310,6 +317,13 @@ export default function NexusDolaStudioScaffold() {
               }}
             >
               {isRunning ? "Running..." : "Run workflow"}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setVoiceEnabled(!voiceEnabled); if (!voiceEnabled) { primeSpeech(); void speak("Voice replies are now enabled."); } }}
+              style={{ background: voiceEnabled ? "rgba(124,243,219,0.12)" : "rgba(255,255,255,0.03)", color: voiceEnabled ? "#8ef7df" : "#aeb6c8", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "10px 12px", fontWeight: 700 }}
+            >
+              {voiceEnabled ? "🔊 Voice" : "🔇 Voice"}
             </button>
           </div>
         </header>
@@ -728,6 +742,7 @@ export default function NexusDolaStudioScaffold() {
             )}
           </section>
         )}
+        <ComfyWorkflowLibrary />
       </main>
     </div>
   );
