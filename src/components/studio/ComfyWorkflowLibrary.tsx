@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import {
   createBlankWorkflow,
   loadStoredWorkflows,
@@ -41,7 +41,7 @@ export default function ComfyWorkflowLibrary() {
     setStatus("New workflow created.");
   }
 
-  function importWorkflow(event: React.ChangeEvent<HTMLInputElement>) {
+  function importWorkflow(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
