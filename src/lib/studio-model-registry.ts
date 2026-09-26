@@ -8,28 +8,28 @@ export type ModelNode = {
 
 export const MODEL_REGISTRY: ModelNode[] = [
   {
-    id: "dola-seed-2.1-turbo",
+    id: "dola-seed-2-1-turbo-260628",
     label: "Dola Seed 2.1 Turbo",
     provider: "modelark",
     category: "assistant",
     description: "Creative director and prompt intelligence",
   },
   {
-    id: "seedream-5.0",
+    id: "dola-seedream-5-0-pro-260628",
     label: "Seedream 5.0",
     provider: "modelark",
     category: "image",
     description: "Image generation and visual concept creation",
   },
   {
-    id: "seedance-2.1",
+    id: "dreamina-seedance-2-0-260128",
     label: "Seedance 2.1",
     provider: "modelark",
     category: "video",
     description: "Video generation and motion-aware creation",
   },
   {
-    id: "seedance-2.5",
+    id: "dreamina-seedance-2-5-260628",
     label: "Seedance 2.5",
     provider: "modelark",
     category: "motion",
